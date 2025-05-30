@@ -1,2 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# Django
+*.log
+db.sqlite3
+media/
+staticfiles/
 .env
-.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup
+fluentpro_backend_backup/
+restructure_project.sh
