@@ -239,11 +239,11 @@ class SupabaseService:
     
     def get_all_roles_with_industry(self) -> List[Dict[str, Any]]:
         """
-        Get all roles with their industry information for embedding
+        Get all roles with their industry information for Azure AI Search indexing
         """
         try:
             response = self.client.table('roles').select(
-                'id, title, description, hierarchy_level, search_keywords, industries(name)'
+                'id, title, description, hierarchy_level, search_keywords, industry_id, is_active, created_at, industries(name)'
             ).eq('is_active', True).execute()
             
             if response.data:
@@ -255,7 +255,10 @@ class SupabaseService:
                         'description': role['description'],
                         'hierarchy_level': role['hierarchy_level'],
                         'search_keywords': role['search_keywords'],
-                        'industry_name': role['industries']['name'] if role['industries'] else ''
+                        'industry_id': role['industry_id'],
+                        'industry_name': role['industries']['name'] if role['industries'] else '',
+                        'is_active': role['is_active'],
+                        'created_at': role['created_at']
                     }
                     roles_with_industry.append(role_data)
                 return roles_with_industry
@@ -264,33 +267,3 @@ class SupabaseService:
                 
         except Exception as e:
             raise Exception(f'Supabase error: {str(e)}')
-    
-    def update_role_embedding(self, role_id: str, embedding_vector: List[float]) -> Dict[str, Any]:
-        """
-        Update a role's embedding vector in Supabase
-        """
-        try:
-            # Convert the embedding to the proper format for pgvector
-            vector_str = f"[{','.join(map(str, embedding_vector))}]"
-            
-            response = self.client.table('roles').update({
-                'embedding_vector': vector_str
-            }).eq('id', role_id).execute()
-            
-            if response.data:
-                return {
-                    'success': True,
-                    'role_id': role_id,
-                    'vector_length': len(embedding_vector)
-                }
-            else:
-                return {
-                    'success': False,
-                    'error': 'Failed to update role embedding'
-                }
-                
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f'Supabase error: {str(e)}'
-            }
