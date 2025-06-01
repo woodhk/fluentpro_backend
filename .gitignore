@@ -26,6 +26,4 @@ staticfiles/
 .DS_Store
 Thumbs.db
 
-# Backup
-fluentpro_backend_backup/
-restructure_project.sh
+

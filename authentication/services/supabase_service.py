@@ -119,3 +119,42 @@ class SupabaseService:
             
         except Exception as e:
             raise Exception(f'Supabase error: {str(e)}')
+    
+    def update_user_native_language(self, auth0_id: str, native_language: str) -> Dict[str, Any]:
+        """
+        Update a user's native language based on their Auth0 ID
+        """
+        try:
+            # Find user by Auth0 ID
+            user = self.get_user_by_auth0_id(auth0_id)
+            if not user:
+                return {
+                    'success': False,
+                    'error': 'User not found'
+                }
+            
+            # Update the native language
+            update_data = {
+                'native_language': native_language,
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table('users').update(update_data).eq('id', user['id']).execute()
+            
+            if response.data:
+                return {
+                    'success': True,
+                    'user_id': user['id'],
+                    'native_language': native_language
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to update native language'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Supabase error: {str(e)}'
+            }
