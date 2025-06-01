@@ -356,3 +356,179 @@ class SupabaseService:
             
         except Exception as e:
             raise Exception(f'Supabase error: {str(e)}')
+    
+    def create_new_role(self, title: str, description: str, industry_id: str, 
+                       search_keywords: List[str], hierarchy_level: str = 'associate') -> Dict[str, Any]:
+        """
+        Create a new role in the roles table
+        """
+        try:
+            # Generate a unique ID for the role
+            role_id = str(uuid.uuid4())
+            
+            # Prepare role data
+            role_data = {
+                'id': role_id,
+                'title': title,
+                'description': description,
+                'industry_id': industry_id,
+                'hierarchy_level': hierarchy_level,
+                'search_keywords': search_keywords,
+                'is_active': True,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            
+            # Insert role into Supabase
+            response = self.client.table('roles').insert(role_data).execute()
+            
+            if response.data:
+                created_role = response.data[0]
+                return {
+                    'success': True,
+                    'role': created_role,
+                    'role_id': role_id
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to create role in Supabase'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Supabase error: {str(e)}'
+            }
+    
+    def get_role_with_industry(self, role_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a role by ID with industry information
+        """
+        try:
+            response = self.client.table('roles').select(
+                'id, title, description, hierarchy_level, search_keywords, industry_id, is_active, created_at, industries(name)'
+            ).eq('id', role_id).execute()
+            
+            if response.data and len(response.data) > 0:
+                role = response.data[0]
+                # Flatten the nested relations for easier access
+                role_data = {
+                    'id': role['id'],
+                    'title': role['title'],
+                    'description': role['description'],
+                    'hierarchy_level': role['hierarchy_level'],
+                    'search_keywords': role['search_keywords'],
+                    'industry_id': role['industry_id'],
+                    'industry_name': role['industries']['name'] if role['industries'] else '',
+                    'is_active': role['is_active'],
+                    'created_at': role['created_at']
+                }
+                return role_data
+            return None
+            
+        except Exception as e:
+            raise Exception(f'Supabase error: {str(e)}')
+    
+    def update_user_session_role_source(self, auth0_id: str, role_source: str, role_details: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Update user session with role source information for onboarding tracking
+        role_source: 'selected' for existing roles, 'created' for new roles
+        """
+        try:
+            # Find user by Auth0 ID
+            user = self.get_user_by_auth0_id(auth0_id)
+            if not user:
+                return {
+                    'success': False,
+                    'error': 'User not found'
+                }
+            
+            # Get or create active user session
+            session_response = self.client.table('user_sessions').select('*').eq('user_id', user['id']).eq('is_active', True).execute()
+            
+            session_data = {
+                'role_source': role_source,
+                'role_source_timestamp': datetime.utcnow().isoformat()
+            }
+            
+            if role_details:
+                session_data.update(role_details)
+            
+            if session_response.data and len(session_response.data) > 0:
+                # Update existing session
+                session = session_response.data[0]
+                existing_data = session.get('session_data_json', {})
+                existing_data.update(session_data)
+                
+                update_response = self.client.table('user_sessions').update({
+                    'session_data_json': existing_data,
+                    'updated_at': datetime.utcnow().isoformat()
+                }).eq('id', session['id']).execute()
+                
+                if update_response.data:
+                    return {
+                        'success': True,
+                        'session_id': session['id'],
+                        'role_source': role_source
+                    }
+            else:
+                # Create new session if none exists
+                from datetime import timedelta
+                session_data_full = {
+                    'user_id': user['id'],
+                    'session_data_json': session_data,
+                    'phase': 'basic_info',
+                    'expires_at': (datetime.utcnow() + timedelta(days=7)).isoformat(),
+                    'is_active': True,
+                    'created_at': datetime.utcnow().isoformat(),
+                    'updated_at': datetime.utcnow().isoformat()
+                }
+                
+                create_response = self.client.table('user_sessions').insert(session_data_full).execute()
+                
+                if create_response.data:
+                    return {
+                        'success': True,
+                        'session_id': create_response.data[0]['id'],
+                        'role_source': role_source
+                    }
+            
+            return {
+                'success': False,
+                'error': 'Failed to update session data'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Supabase error: {str(e)}'
+            }
+    
+    def get_user_role_source(self, auth0_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the role source information for a user from their active session
+        """
+        try:
+            # Find user by Auth0 ID
+            user = self.get_user_by_auth0_id(auth0_id)
+            if not user:
+                return None
+            
+            # Get active user session
+            session_response = self.client.table('user_sessions').select('*').eq('user_id', user['id']).eq('is_active', True).execute()
+            
+            if session_response.data and len(session_response.data) > 0:
+                session = session_response.data[0]
+                session_data = session.get('session_data_json', {})
+                
+                if 'role_source' in session_data:
+                    return {
+                        'role_source': session_data.get('role_source'),
+                        'role_source_timestamp': session_data.get('role_source_timestamp'),
+                        'session_id': session['id']
+                    }
+            
+            return None
+            
+        except Exception as e:
+            raise Exception(f'Supabase error: {str(e)}')

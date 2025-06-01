@@ -350,3 +350,82 @@ class AzureSearchService:
                 'success': False,
                 'error': f'Failed to delete index: {str(e)}'
             }
+    
+    def add_single_role_to_index(self, role_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Add a single new role to the Azure AI Search index with on-the-fly embedding generation
+        """
+        try:
+            print(f"   🔄 Adding new role to Azure Search: {role_data.get('title', 'Unknown')}")
+            
+            # Generate embedding on-the-fly using Azure OpenAI
+            try:
+                embedding_vector = self.azure_openai_service.embed_role(role_data)
+                print(f"      ✅ Generated embedding: {len(embedding_vector)} dimensions")
+            except Exception as e:
+                print(f"      ❌ Failed to generate embedding: {str(e)}")
+                return {
+                    'success': False,
+                    'error': f'Failed to generate embedding: {str(e)}'
+                }
+            
+            # Convert search_keywords to a searchable string
+            search_keywords = role_data.get('search_keywords', [])
+            if search_keywords is None:
+                search_keywords_str = ""
+            elif isinstance(search_keywords, list):
+                # Join array elements into a single searchable string
+                search_keywords_str = " ".join(search_keywords)
+            elif isinstance(search_keywords, str):
+                search_keywords_str = search_keywords
+            else:
+                search_keywords_str = str(search_keywords)
+            
+            # Ensure created_at is in proper format
+            created_at = role_data.get('created_at')
+            if created_at and isinstance(created_at, str):
+                # Convert to ISO format if needed
+                try:
+                    from datetime import datetime
+                    if 'T' not in created_at:
+                        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00')).isoformat()
+                except:
+                    created_at = None
+            
+            document = {
+                "id": role_data['id'],
+                "title": role_data['title'],
+                "description": role_data['description'],
+                "industry_id": role_data['industry_id'],
+                "industry_name": role_data['industry_name'],
+                "hierarchy_level": role_data['hierarchy_level'],
+                "search_keywords": search_keywords_str,
+                "embedding_vector": embedding_vector,
+                "is_active": role_data.get('is_active', True),
+                "created_at": created_at
+            }
+            
+            # Upload document to the index
+            result = self.search_client.upload_documents([document])
+            
+            # Check results
+            upload_result = result[0]
+            if upload_result.succeeded:
+                print(f"      ✅ Successfully added role to Azure Search index")
+                return {
+                    'success': True,
+                    'message': f'Role "{role_data["title"]}" added to search index successfully',
+                    'role_id': role_data['id']
+                }
+            else:
+                print(f"      ❌ Failed to upload role: {upload_result.error_message}")
+                return {
+                    'success': False,
+                    'error': f'Failed to upload role: {upload_result.error_message}'
+                }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Failed to add role to index: {str(e)}'
+            }

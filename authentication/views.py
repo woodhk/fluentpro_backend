@@ -434,6 +434,16 @@ class RoleSelectionView(APIView):
                     'message': update_result['error']
                 }, status=status.HTTP_400_BAD_REQUEST)
             
+            # Track that this was a selected (existing) role
+            session_update = supabase_service.update_user_session_role_source(
+                auth0_id=request.user.sub,
+                role_source='selected',
+                role_details={
+                    'selected_role_id': update_result['selected_role_id'],
+                    'selected_role_title': update_result['role_title']
+                }
+            )
+            
             # Get updated user profile
             user_profile = supabase_service.get_user_full_profile(request.user.sub)
             
@@ -445,6 +455,7 @@ class RoleSelectionView(APIView):
                     'id': update_result['selected_role_id'],
                     'title': update_result['role_title']
                 },
+                'role_source': 'selected',
                 'user_profile': {
                     'native_language': user_profile['native_language'],
                     'industry_name': user_profile['industry_name'],
@@ -457,5 +468,173 @@ class RoleSelectionView(APIView):
             logger.error(f"Role selection error: {str(e)}")
             return Response({
                 'error': 'Role selection failed',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class NewRoleCreationView(APIView):
+    """
+    Phase 2 Step 2: Handle role rejection and create new role when user rejects all presented roles
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            # Extract job data from request
+            job_title = request.data.get('job_title', '').strip()
+            job_description = request.data.get('job_description', '').strip()
+            hierarchy_level = request.data.get('hierarchy_level', 'associate').strip()
+            
+            if not job_title:
+                return Response({
+                    'error': 'Validation failed',
+                    'message': 'Job title is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not job_description:
+                return Response({
+                    'error': 'Validation failed',
+                    'message': 'Job description is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate hierarchy level
+            valid_levels = ['associate', 'supervisor', 'manager', 'director']
+            if hierarchy_level not in valid_levels:
+                hierarchy_level = 'associate'  # Default fallback
+            
+            # Initialize services
+            supabase_service = SupabaseService()
+            azure_search_service = AzureSearchService()
+            azure_openai_service = AzureOpenAIService()
+            
+            # Get user profile to get their industry
+            user_profile = supabase_service.get_user_full_profile(request.user.sub)
+            
+            if not user_profile:
+                return Response({
+                    'error': 'User not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            if not user_profile.get('industry_id'):
+                return Response({
+                    'error': 'User industry not set',
+                    'message': 'Please complete industry selection first'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            print(f"🔄 Phase 2 Step 2: Creating new role for {user_profile['full_name']}")
+            print(f"   💼 Job Title: {job_title}")
+            print(f"   📋 Job Description: {job_description[:100]}...")
+            print(f"   📈 Hierarchy Level: {hierarchy_level}")
+            
+            # Step 1: Rewrite job description from first person to third person
+            print("   ✏️  Rewriting job description using LLM...")
+            rewritten_description = azure_openai_service.rewrite_job_description(job_title, job_description)
+            print(f"   ✅ Description rewritten successfully")
+            
+            # Step 2: Generate keywords using LLM
+            print("   🤖 Generating keywords using LLM...")
+            generated_keywords = azure_openai_service.generate_role_keywords(job_title, job_description)
+            print(f"   ✅ Generated keywords: {', '.join(generated_keywords)}")
+            
+            # Step 3: Create new role in Supabase
+            print("   💾 Creating new role in Supabase...")
+            role_creation_result = supabase_service.create_new_role(
+                title=job_title,
+                description=rewritten_description,  # Use rewritten description
+                industry_id=user_profile['industry_id'],
+                search_keywords=generated_keywords,
+                hierarchy_level=hierarchy_level
+            )
+            
+            if not role_creation_result['success']:
+                return Response({
+                    'error': 'Role creation failed',
+                    'message': role_creation_result['error']
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            new_role_id = role_creation_result['role_id']
+            print(f"   ✅ Role created in Supabase: ID {new_role_id}")
+            
+            # Step 3: Get the complete role data with industry information
+            role_with_industry = supabase_service.get_role_with_industry(new_role_id)
+            
+            if not role_with_industry:
+                return Response({
+                    'error': 'Failed to retrieve created role'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Step 4: Add role to Azure AI Search index
+            print("   🔍 Adding role to Azure AI Search index...")
+            search_index_result = azure_search_service.add_single_role_to_index(role_with_industry)
+            
+            if not search_index_result['success']:
+                # Log the error but don't fail the entire operation
+                logger.warning(f"Failed to add role to search index: {search_index_result['error']}")
+                print(f"   ⚠️  Warning: Failed to add to search index: {search_index_result['error']}")
+            else:
+                print(f"   ✅ Role added to Azure Search index")
+            
+            # Step 5: Update user's selected role
+            print("   👤 Updating user's selected role...")
+            update_result = supabase_service.update_user_selected_role(
+                auth0_id=request.user.sub,
+                role_id=new_role_id
+            )
+            
+            if not update_result['success']:
+                return Response({
+                    'error': 'Failed to update user role selection',
+                    'message': update_result['error']
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            print(f"   ✅ User role selection updated")
+            
+            # Step 6: Track that this was a newly created role
+            print("   📝 Tracking role source as 'created'...")
+            session_update = supabase_service.update_user_session_role_source(
+                auth0_id=request.user.sub,
+                role_source='created',
+                role_details={
+                    'created_role_id': new_role_id,
+                    'created_role_title': job_title,
+                    'original_description': job_description,
+                    'rewritten_description': rewritten_description,
+                    'generated_keywords': generated_keywords
+                }
+            )
+            print(f"   ✅ Role source tracked successfully")
+            
+            # Get updated user profile
+            updated_profile = supabase_service.get_user_full_profile(request.user.sub)
+            
+            # Prepare response
+            response_data = {
+                'success': True,
+                'message': 'New role created and selected successfully',
+                'new_role': {
+                    'id': new_role_id,
+                    'title': job_title,
+                    'description': rewritten_description,  # Return rewritten description
+                    'original_description': job_description,  # Also include original for reference
+                    'hierarchy_level': hierarchy_level,
+                    'generated_keywords': generated_keywords,
+                    'industry_name': user_profile['industry_name']
+                },
+                'role_source': 'created',
+                'user_profile': {
+                    'native_language': updated_profile['native_language'],
+                    'industry_name': updated_profile['industry_name'],
+                    'role_title': updated_profile['role_title'],
+                    'onboarding_status': updated_profile['onboarding_status']
+                },
+                'search_index_status': search_index_result['success']
+            }
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"New role creation error: {str(e)}")
+            return Response({
+                'error': 'New role creation failed',
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
