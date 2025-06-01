@@ -158,3 +158,81 @@ class SupabaseService:
                 'success': False,
                 'error': f'Supabase error: {str(e)}'
             }
+    
+    def update_user_industry(self, auth0_id: str, industry_id: str) -> Dict[str, Any]:
+        """
+        Update a user's industry based on their Auth0 ID
+        """
+        try:
+            # Find user by Auth0 ID
+            user = self.get_user_by_auth0_id(auth0_id)
+            if not user:
+                return {
+                    'success': False,
+                    'error': 'User not found'
+                }
+            
+            # Validate that the industry exists and is available
+            industry_response = self.client.table('industries').select('*').eq('id', industry_id).execute()
+            
+            if not industry_response.data:
+                return {
+                    'success': False,
+                    'error': 'Industry not found'
+                }
+            
+            industry = industry_response.data[0]
+            if industry.get('status') != 'available':
+                return {
+                    'success': False,
+                    'error': 'Industry is not available for selection'
+                }
+            
+            # Update the user's industry
+            update_data = {
+                'industry_id': industry_id,
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table('users').update(update_data).eq('id', user['id']).execute()
+            
+            if response.data:
+                return {
+                    'success': True,
+                    'user_id': user['id'],
+                    'industry_id': industry_id,
+                    'industry_name': industry.get('name')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to update industry'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Supabase error: {str(e)}'
+            }
+    
+    def get_available_industries(self) -> list:
+        """
+        Get all available industries for selection
+        """
+        try:
+            response = self.client.table('industries').select('*').eq('status', 'available').order('sort_order', desc=False).execute()
+            
+            if response.data:
+                return [
+                    {
+                        'id': industry['id'],
+                        'name': industry['name'],
+                        'sort_order': industry.get('sort_order', 0)
+                    }
+                    for industry in response.data
+                ]
+            else:
+                return []
+                
+        except Exception as e:
+            raise Exception(f'Supabase error: {str(e)}')

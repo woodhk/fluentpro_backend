@@ -88,3 +88,82 @@ def get_available_languages(request):
     return Response({
         "languages": languages
     }, status=status.HTTP_200_OK)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@authentication_classes([Auth0JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def set_industry(request):
+    """
+    API endpoint for Phase 1 onboarding: Set user's industry
+    Expected payload: {"industry_id": "94642aff-7100-431b-a6a8-7fd741064a73"}
+    """
+    try:
+        data = json.loads(request.body)
+        industry_id = data.get('industry_id')
+        
+        if not industry_id:
+            return Response(
+                {"error": "industry_id is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get user info from Auth0 token
+        auth0_id = request.user.get('sub')  # Auth0 user ID from JWT
+        
+        if not auth0_id:
+            return Response(
+                {"error": "Invalid authentication"}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Update user's industry in Supabase
+        supabase_service = SupabaseService()
+        result = supabase_service.update_user_industry(auth0_id, industry_id)
+        
+        if result.get('success'):
+            return Response({
+                "message": "Industry updated successfully",
+                "industry_id": industry_id,
+                "industry_name": result.get('industry_name'),
+                "user_id": result.get('user_id')
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"error": result.get('error', 'Failed to update industry')}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+    except json.JSONDecodeError:
+        return Response(
+            {"error": "Invalid JSON payload"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return Response(
+            {"error": f"Internal server error: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@authentication_classes([Auth0JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_available_industries(request):
+    """
+    API endpoint to get available industries for selection
+    """
+    try:
+        supabase_service = SupabaseService()
+        industries = supabase_service.get_available_industries()
+        
+        return Response({
+            "industries": industries
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {"error": f"Internal server error: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
