@@ -1,7 +1,8 @@
 from django.urls import path
 from authentication.views import (
     SignUpView, LoginView, RefreshTokenView, 
-    LogoutView, Auth0CallbackView, UserProfileView
+    LogoutView, Auth0CallbackView, UserProfileView,
+    JobInputView, RoleSelectionView
 )
 from authentication.health import HealthCheckView
 
@@ -14,5 +15,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('auth0/callback/', Auth0CallbackView.as_view(), name='auth0_callback'),
     path('profile/', UserProfileView.as_view(), name='user_profile'),
+    path('job-input/', JobInputView.as_view(), name='job_input'),
+    path('role-selection/', RoleSelectionView.as_view(), name='role_selection'),
     path('health/', HealthCheckView.as_view(), name='health_check'),
 ]

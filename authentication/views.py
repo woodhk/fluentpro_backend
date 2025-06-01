@@ -11,6 +11,8 @@ from authentication.serializers import (
 )
 from authentication.services.auth0_service import Auth0Service
 from authentication.services.supabase_service import SupabaseService
+from authentication.services.azure_search_service import AzureSearchService
+from authentication.services.azure_openai_service import AzureOpenAIService
 from datetime import datetime
 import logging
 
@@ -298,5 +300,162 @@ class UserProfileView(APIView):
             logger.error(f"User profile error: {str(e)}")
             return Response({
                 'error': 'Failed to get user profile',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class JobInputView(APIView):
+    """
+    Phase 2 Step 1: User inputs job title and description for role matching
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            # Extract job data from request
+            job_title = request.data.get('job_title', '').strip()
+            job_description = request.data.get('job_description', '').strip()
+            
+            if not job_title:
+                return Response({
+                    'error': 'Validation failed',
+                    'message': 'Job title is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not job_description:
+                return Response({
+                    'error': 'Validation failed',
+                    'message': 'Job description is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Initialize services
+            supabase_service = SupabaseService()
+            azure_search_service = AzureSearchService()
+            azure_openai_service = AzureOpenAIService()
+            
+            # Get user profile to get their industry
+            user_profile = supabase_service.get_user_full_profile(request.user.sub)
+            
+            if not user_profile:
+                return Response({
+                    'error': 'User not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            if not user_profile.get('industry_name'):
+                return Response({
+                    'error': 'User industry not set',
+                    'message': 'Please complete industry selection first'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create comprehensive query text for embedding
+            query_text = f"Job Title: {job_title}\nIndustry: {user_profile['industry_name']}\nDescription: {job_description}"
+            
+            # Generate embedding for the user's job input
+            query_embedding = azure_openai_service.get_embedding(query_text)
+            
+            # Search for similar roles with industry filter
+            industry_filter = f"industry_name eq '{user_profile['industry_name']}'"
+            
+            # Use hybrid search combining text and vector similarity
+            search_result = azure_search_service.hybrid_search_roles(
+                text_query=f"{job_title} {job_description}",
+                query_embedding=query_embedding,
+                top_k=5,
+                filters=industry_filter
+            )
+            
+            if not search_result['success']:
+                return Response({
+                    'error': 'Role search failed',
+                    'message': search_result['error']
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Format results
+            matched_roles = []
+            for role in search_result['results']:
+                matched_roles.append({
+                    'id': role['id'],
+                    'title': role['title'],
+                    'description': role['description'],
+                    'industry_name': role['industry_name'],
+                    'hierarchy_level': role['hierarchy_level'],
+                    'search_keywords': role.get('search_keywords', ''),
+                    'relevance_score': role['score']
+                })
+            
+            return Response({
+                'success': True,
+                'user_job_input': {
+                    'job_title': job_title,
+                    'job_description': job_description,
+                    'user_industry': user_profile['industry_name']
+                },
+                'matched_roles': matched_roles,
+                'total_matches': len(matched_roles)
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Job input processing error: {str(e)}")
+            return Response({
+                'error': 'Job input processing failed',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RoleSelectionView(APIView):
+    """
+    Phase 2 Step 1: User selects a role and updates their selected_role_id
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            # Extract role ID from request
+            role_id = request.data.get('role_id', '').strip()
+            
+            if not role_id:
+                return Response({
+                    'error': 'Validation failed',
+                    'message': 'Role ID is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Initialize Supabase service
+            supabase_service = SupabaseService()
+            
+            # Update user's selected role
+            update_result = supabase_service.update_user_selected_role(
+                auth0_id=request.user.sub,
+                role_id=role_id
+            )
+            
+            if not update_result['success']:
+                return Response({
+                    'error': 'Role selection failed',
+                    'message': update_result['error']
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get updated user profile
+            user_profile = supabase_service.get_user_full_profile(request.user.sub)
+            
+            return Response({
+                'success': True,
+                'message': 'Role selected successfully',
+                'user_id': update_result['user_id'],
+                'selected_role': {
+                    'id': update_result['selected_role_id'],
+                    'title': update_result['role_title']
+                },
+                'user_profile': {
+                    'native_language': user_profile['native_language'],
+                    'industry_name': user_profile['industry_name'],
+                    'role_title': user_profile['role_title'],
+                    'onboarding_status': user_profile['onboarding_status']
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Role selection error: {str(e)}")
+            return Response({
+                'error': 'Role selection failed',
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

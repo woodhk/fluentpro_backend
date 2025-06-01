@@ -267,3 +267,92 @@ class SupabaseService:
                 
         except Exception as e:
             raise Exception(f'Supabase error: {str(e)}')
+    
+    def update_user_selected_role(self, auth0_id: str, role_id: str) -> Dict[str, Any]:
+        """
+        Update a user's selected role based on their Auth0 ID
+        """
+        try:
+            # Find user by Auth0 ID
+            user = self.get_user_by_auth0_id(auth0_id)
+            if not user:
+                return {
+                    'success': False,
+                    'error': 'User not found'
+                }
+            
+            # Validate that the role exists and is active
+            role_response = self.client.table('roles').select('*').eq('id', role_id).execute()
+            
+            if not role_response.data:
+                return {
+                    'success': False,
+                    'error': 'Role not found'
+                }
+            
+            role = role_response.data[0]
+            if not role.get('is_active', True):
+                return {
+                    'success': False,
+                    'error': 'Role is not available for selection'
+                }
+            
+            # Update the user's selected role
+            update_data = {
+                'selected_role_id': role_id,
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table('users').update(update_data).eq('id', user['id']).execute()
+            
+            if response.data:
+                return {
+                    'success': True,
+                    'user_id': user['id'],
+                    'selected_role_id': role_id,
+                    'role_title': role.get('title')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to update selected role'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Supabase error: {str(e)}'
+            }
+    
+    def get_user_full_profile(self, auth0_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a user's full profile including industry and selected role information
+        """
+        try:
+            response = self.client.table('users').select(
+                'id, full_name, email, date_of_birth, auth0_id, native_language, industry_id, selected_role_id, onboarding_status, hierarchy_level, industries(name), roles(title, description)'
+            ).eq('auth0_id', auth0_id).execute()
+            
+            if response.data and len(response.data) > 0:
+                user = response.data[0]
+                # Flatten the nested relations for easier access
+                user_profile = {
+                    'id': user['id'],
+                    'full_name': user['full_name'],
+                    'email': user['email'],
+                    'date_of_birth': user['date_of_birth'],
+                    'auth0_id': user['auth0_id'],
+                    'native_language': user['native_language'],
+                    'industry_id': user['industry_id'],
+                    'industry_name': user['industries']['name'] if user['industries'] else None,
+                    'selected_role_id': user['selected_role_id'],
+                    'role_title': user['roles']['title'] if user['roles'] else None,
+                    'role_description': user['roles']['description'] if user['roles'] else None,
+                    'onboarding_status': user['onboarding_status'],
+                    'hierarchy_level': user['hierarchy_level']
+                }
+                return user_profile
+            return None
+            
+        except Exception as e:
+            raise Exception(f'Supabase error: {str(e)}')

@@ -1,5 +1,5 @@
 import os
-import openai
+from openai import AzureOpenAI
 from typing import List, Dict, Any
 from django.conf import settings
 from decouple import config
@@ -11,11 +11,12 @@ class AzureOpenAIService:
     """
     
     def __init__(self):
-        # Configure Azure OpenAI client
-        openai.api_type = "azure"
-        openai.api_base = config('AZURE_OPENAI_ENDPOINT')
-        openai.api_key = config('AZURE_OPENAI_API_KEY')
-        openai.api_version = config('AZURE_OPENAI_API_VERSION')
+        # Configure Azure OpenAI client using v1.0+ API
+        self.client = AzureOpenAI(
+            azure_endpoint=config('AZURE_OPENAI_ENDPOINT'),
+            api_key=config('AZURE_OPENAI_API_KEY'),
+            api_version=config('AZURE_OPENAI_API_VERSION')
+        )
         self.embedding_deployment = config('AZURE_OPENAI_EMBEDDING_DEPLOYMENT')
     
     def get_embedding(self, text: str) -> List[float]:
@@ -23,8 +24,8 @@ class AzureOpenAIService:
         Get embedding vector for a given text using Azure OpenAI
         """
         try:
-            response = openai.Embedding.create(
-                engine=self.embedding_deployment,
+            response = self.client.embeddings.create(
+                model=self.embedding_deployment,
                 input=text
             )
             
