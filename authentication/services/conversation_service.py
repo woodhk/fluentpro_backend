@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from typing import Dict, List, Any, Optional
 import json
+import re
 from django.conf import settings
 
 
@@ -16,6 +17,13 @@ class ConversationFlowService:
             model="gpt-4o-2024-11-20",  # Using latest GPT-4 model
             api_key=settings.OPENAI_API_KEY,
             temperature=0.7
+        )
+        
+        # Evaluator LLM for checking completeness
+        self.evaluator_llm = ChatOpenAI(
+            model="gpt-4o-2024-11-20",
+            api_key=settings.OPENAI_API_KEY,
+            temperature=0.1  # Lower temperature for more consistent evaluation
         )
         
         # Conversation state tracking
@@ -35,15 +43,21 @@ Your task is to conduct a conversation in {native_language} following these step
 1. Initial Greeting: Greet {user_name} by name and ask how their day is
 2. State Purpose: Explain the purpose of this conversation and confirm they're ready
 3. Communication Partners: Ask who they typically speak English with at work (Clients? Customers? Colleagues? Suppliers? Partners? Senior Management? Stakeholders? Other?)
-4. Work Situations: For each communication partner mentioned, discover what situations they need to speak English in (Meetings? Negotiations? Presentations? Consultations? Interviews? Other?)
+4. Work Situations: For each communication partner mentioned, discover what situations they need to speak English in (Meetings? Negotiations? Presentations? Consultations? Interviews? Phone calls? Customer complaints? Training sessions? Other?)
 5. Repeat for all communication partners
+
+CRITICAL: Follow-up questions should verify COMPLETENESS, not explore details.
+- When they mention situations (e.g., "meetings"), ask "Are there any OTHER situations where you speak English with [partner] that you haven't mentioned yet?"
+- Provide examples of other possible situations to jog their memory
+- Don't ask for more details about situations they already mentioned
+- Goal: Ensure you've captured ALL situations, not deeper information about each one
 
 Important guidelines:
 - Always acknowledge what the user said
 - Keep an enthusiastic, supportive tone but remain professional
 - Speak in {native_language}
 - Focus on VERBAL/SPOKEN communication in English, NOT writing
-- Ask follow-up questions to ensure completeness
+- Ask follow-up questions to ensure completeness, not for more detail
 - When you determine the conversation is finished, respond with exactly "CONVERSATION_FINISHED"
 
 Current conversation step: You will be told which step you're on."""
@@ -52,6 +66,13 @@ Current conversation step: You will be told which step you're on."""
         """
         Get the prompt for the current conversation step
         """
+        if context is None:
+            context = {}
+            
+        current_partner = context.get('current_partner_being_asked', 'the communication partners')
+        all_partners = context.get('all_partners_mentioned', [])
+        partners_covered = context.get('partners_covered', [])
+        
         prompts = {
             1: f"Start with Step 1: Initial Greeting. Greet {user_name} by name and ask how their day is. Be warm and friendly.",
             
@@ -59,9 +80,23 @@ Current conversation step: You will be told which step you're on."""
             
             3: "Move to Step 3: Ask about Communication Partners. Find out who they typically speak English with at work. Provide examples like: Clients, Customers, Colleagues, Suppliers, Partners, Senior Management, Stakeholders, or others.",
             
-            4: f"Move to Step 4: Work Situations. Ask about specific work situations where they need to speak English with {context.get('current_partner', 'the communication partners they mentioned')}. Provide examples like: Meetings, Negotiations, Presentations, Consultations, Interviews, or other situations.",
+            4: f"""Move to Step 4: Work Situations. 
             
-            5: "Continue exploring work situations for the next communication partner, or if all partners have been covered, summarize what you've learned and determine if the conversation is complete."
+            CURRENT FOCUS: Ask about work situations for '{current_partner}'.
+            
+            ALL PARTNERS MENTIONED: {all_partners}
+            PARTNERS ALREADY COVERED: {partners_covered}
+            
+            For {current_partner}, ask what specific situations they speak English in. After they respond, follow up to VERIFY COMPLETENESS by asking if there are any OTHER situations they haven't mentioned yet. Provide examples of different situations like: Meetings, Negotiations, Presentations, Consultations, Interviews, Phone calls, Customer complaints, Training sessions, etc. 
+            
+            The goal is to ensure you've captured ALL situations for {current_partner}, not to go deeper into the ones they already mentioned.""",
+            
+            5: f"""All communication partners have been covered! 
+            
+            PARTNERS COVERED: {partners_covered}
+            WORK SITUATIONS COLLECTED: {context.get('work_situations', {})}
+            
+            Summarize what you've learned and determine if the conversation is complete. If you feel you have comprehensive information about all their English speaking needs, you can end the conversation."""
         }
         
         return prompts.get(step, "Continue the conversation naturally based on the user's responses.")
@@ -131,6 +166,13 @@ Respond appropriately in {native_language}. If you determine the conversation is
                 conversation_state, user_message, ai_response
             )
             
+            # If conversation is finished, analyze and extract final summary
+            if is_finished:
+                print("🔍 Debug: Conversation finished, analyzing for summary...")
+                analysis = self.analyze_conversation_for_summary(conversation_state['conversation_history'])
+                conversation_state['final_analysis'] = analysis
+                print(f"🔍 Debug: Final analysis: {analysis}")
+            
             return {
                 'success': True,
                 'ai_response': ai_response,
@@ -159,34 +201,106 @@ Respond appropriately in {native_language}. If you determine the conversation is
     
     def _update_conversation_state(self, state: Dict, user_message: str, ai_response: str) -> Dict:
         """
-        Update conversation state based on the current interaction
+        Update conversation state with proper partner transition handling
         """
-        # Simple state progression logic
         current_step = state['step']
+        current_partner = state.get('current_partner_being_asked')
+        partner_sub_state = state.get('partner_sub_state', 'initial')
+        waiting_for_completeness = state.get('waiting_for_completeness_response', False)
         
-        # Progress to next step based on content and current step
-        if current_step == 1 and any(word in user_message.lower() for word in ['good', 'fine', 'well', 'great', 'ok']):
+        print(f"🔍 Debug State: step={current_step}, partner={current_partner}, sub_state={partner_sub_state}, waiting_completeness={waiting_for_completeness}")
+        
+        # Step 1: Initial greeting
+        if current_step == 1 and any(word in user_message.lower() for word in ['good', 'fine', 'well', 'great', 'ok', 'hi']):
             state['step'] = 2
-        elif current_step == 2 and any(word in user_message.lower() for word in ['yes', 'ready', 'sure', 'ok']):
-            state['step'] = 3
-        elif current_step == 3 and len(user_message.strip()) > 10:  # User provided communication partners
-            # Extract mentioned partners (simplified)
-            partners = self._extract_communication_partners(user_message)
-            state['communication_partners'].extend(partners)
-            state['step'] = 4
-        elif current_step == 4:
-            # User provided work situations
-            if state['communication_partners']:
-                current_partner = state['communication_partners'][0] if state['communication_partners'] else 'general'
+            
+        # Step 2: Ready to proceed or partners mentioned
+        elif current_step == 2:
+            if any(word in user_message.lower() for word in ['yes', 'ready', 'sure', 'ok', 'yep', 'yeah']):
+                state['step'] = 3
+            elif any(word in user_message.lower() for word in ['client', 'colleague', 'management', 'stakeholder', 'customer', 'supplier']):
+                partners = self.extract_communication_partners(user_message)
+                if partners:
+                    for partner in partners:
+                        if partner not in state['all_partners_mentioned']:
+                            state['all_partners_mentioned'].append(partner)
+                    
+                    print(f"🔍 Debug: Extracted partners: {partners}")
+                    print(f"🔍 Debug: All partners mentioned: {state['all_partners_mentioned']}")
+                    
+                    state['step'] = 4
+                    state['current_partner_being_asked'] = state['all_partners_mentioned'][0]
+                    state['partner_sub_state'] = 'collecting'
+            
+        # Step 3: Communication partners mentioned
+        elif current_step == 3 and len(user_message.strip()) > 5:
+            partners = self.extract_communication_partners(user_message)
+            
+            for partner in partners:
+                if partner not in state['all_partners_mentioned']:
+                    state['all_partners_mentioned'].append(partner)
+            
+            print(f"🔍 Debug: Extracted partners: {partners}")
+            print(f"🔍 Debug: All partners mentioned: {state['all_partners_mentioned']}")
+            
+            if partners:
+                state['step'] = 4
+                state['current_partner_being_asked'] = state['all_partners_mentioned'][0]
+                state['partner_sub_state'] = 'collecting'
+            
+        # Step 4: Work situations collection with proper partner tracking
+        elif current_step == 4 and current_partner:
+            
+            # Check if this response contains work situations
+            has_situations = any(word in user_message.lower() for word in ['meeting', 'presentation', 'call', 'negotiation', 'consultation', 'review', 'training'])
+            
+            if has_situations:
+                # Extract and add situations to the CURRENT partner (not the next one!)
                 situations = self._extract_work_situations(user_message)
-                state['work_situations'][current_partner] = situations
+                if situations:
+                    # Always add to current partner, extending existing list if any
+                    existing_situations = state['work_situations'].get(current_partner, [])
+                    all_situations = existing_situations + [s for s in situations if s not in existing_situations]
+                    state['work_situations'][current_partner] = all_situations
+                    
+                    print(f"🔍 Debug: Added situations for {current_partner}: {situations}")
+                    print(f"🔍 Debug: Total situations for {current_partner}: {all_situations}")
+                    
+                    # Set waiting for completeness verification
+                    state['waiting_for_completeness_response'] = True
+                    state['partner_sub_state'] = 'verifying_completeness'
+            
+            # Handle completeness responses ("no", "not really", etc.)
+            elif waiting_for_completeness and user_message.lower().strip() in ['no', 'nope', 'nothing', 'not really', 'that\'s it', 'none', 'that\'s all']:
+                # Current partner is complete, mark as covered
+                if current_partner not in state['partners_covered']:
+                    state['partners_covered'].append(current_partner)
                 
-                # Check if we need to ask about more partners
-                if len(state['communication_partners']) > 1:
-                    state['communication_partners'].pop(0)  # Remove processed partner
-                    # Stay in step 4 for next partner
+                print(f"🔍 Debug: Partner {current_partner} marked as complete")
+                print(f"🔍 Debug: Partners covered: {state['partners_covered']}")
+                
+                # Check if all partners have been covered
+                evaluation = self.evaluate_conversation_completeness(state)
+                print(f"🔍 Debug: Evaluation result: {evaluation}")
+                
+                if evaluation['all_covered']:
+                    state['step'] = 5
+                    state['current_partner_being_asked'] = None
+                    state['partner_sub_state'] = 'initial'
+                    state['waiting_for_completeness_response'] = False
                 else:
-                    state['step'] = 5  # Move to conclusion
+                    # Move to next partner
+                    next_partner = evaluation.get('next_partner_to_ask')
+                    if next_partner:
+                        state['current_partner_being_asked'] = next_partner
+                        state['partner_sub_state'] = 'collecting'
+                        state['waiting_for_completeness_response'] = False
+                        print(f"🔍 Debug: Moving to next partner: {next_partner}")
+                    else:
+                        state['step'] = 5
+                        state['current_partner_being_asked'] = None
+                        state['partner_sub_state'] = 'initial'
+                        state['waiting_for_completeness_response'] = False
         
         return state
     
@@ -232,6 +346,128 @@ Respond appropriately in {native_language}. If you determine the conversation is
         
         return situations if situations else ['general_communication']
     
+    def extract_communication_partners(self, user_message: str) -> List[str]:
+        """
+        Use LLM to extract communication partners from user message
+        """
+        extract_prompt = f"""
+        Extract all communication partners mentioned in this message. Return ONLY a JSON list of partners.
+        
+        Message: "{user_message}"
+        
+        Possible partners include: clients, customers, colleagues, coworkers, team members, suppliers, vendors, partners, senior management, managers, stakeholders, investors, external partners, etc.
+        
+        Return format: ["partner1", "partner2", "partner3"]
+        """
+        
+        try:
+            response = self.evaluator_llm.invoke([SystemMessage(content=extract_prompt)])
+            # Extract JSON from response
+            import re
+            json_match = re.search(r'\[.*\]', response.content)
+            if json_match:
+                partners = json.loads(json_match.group())
+                return [p.lower().strip() for p in partners if p.strip()]
+            return []
+        except Exception as e:
+            print(f"Error extracting partners: {e}")
+            return self._extract_communication_partners(user_message)  # Fallback to simple method
+
+    def evaluate_conversation_completeness(self, conversation_state: Dict) -> Dict[str, Any]:
+        """
+        Use evaluator LLM to check if all communication partners have been covered
+        """
+        partners_mentioned = conversation_state.get('all_partners_mentioned', [])
+        partners_covered = list(conversation_state.get('work_situations', {}).keys())
+        
+        evaluation_prompt = f"""
+        You are evaluating whether a conversation has covered all communication partners.
+        
+        Partners mentioned by user: {partners_mentioned}
+        Partners we've asked about work situations: {partners_covered}
+        
+        TASK: Determine if there are any partners mentioned by the user that we haven't asked about work situations yet.
+        
+        Return your response in this exact JSON format:
+        {{
+            "all_covered": true/false,
+            "missing_partners": ["partner1", "partner2"],
+            "next_partner_to_ask": "partner_name" or null
+        }}
+        
+        Rules:
+        - "all_covered" should be true ONLY if every partner mentioned has been asked about
+        - "missing_partners" should list partners mentioned but not yet asked about
+        - "next_partner_to_ask" should be the first missing partner, or null if all covered
+        """
+        
+        try:
+            response = self.evaluator_llm.invoke([SystemMessage(content=evaluation_prompt)])
+            # Extract JSON from response
+            import re
+            json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
+            if json_match:
+                evaluation = json.loads(json_match.group())
+                return evaluation
+            return {"all_covered": False, "missing_partners": [], "next_partner_to_ask": None}
+        except Exception as e:
+            print(f"Error in evaluation: {e}")
+            # Fallback logic
+            missing = [p for p in partners_mentioned if p not in partners_covered]
+            return {
+                "all_covered": len(missing) == 0,
+                "missing_partners": missing,
+                "next_partner_to_ask": missing[0] if missing else None
+            }
+
+    def analyze_conversation_for_summary(self, conversation_history: List[Dict]) -> Dict[str, Any]:
+        """
+        Use LLM to analyze conversation history and extract communication partners and work situations
+        """
+        # Build conversation text
+        conversation_text = ""
+        for msg in conversation_history:
+            speaker = "User" if msg['type'] == 'user' else "AI"
+            conversation_text += f"{speaker}: {msg['content']}\n"
+        
+        analysis_prompt = f"""
+        Analyze this conversation and extract the communication partners and work situations mentioned.
+        
+        CONVERSATION:
+        {conversation_text}
+        
+        TASK: Extract all communication partners and their associated work situations from this conversation.
+        
+        Return your response in this exact JSON format:
+        {{
+            "communication_partners": ["partner1", "partner2", "partner3"],
+            "work_situations": {{
+                "partner1": ["situation1", "situation2"],
+                "partner2": ["situation1", "situation3"],
+                "partner3": ["situation1"]
+            }}
+        }}
+        
+        Rules:
+        - Only include partners that were explicitly mentioned by the user
+        - Only include work situations that were explicitly mentioned by the user
+        - Use consistent naming (e.g., "clients", "senior management", "stakeholders")
+        - Include all situations mentioned for each partner
+        """
+        
+        try:
+            response = self.evaluator_llm.invoke([SystemMessage(content=analysis_prompt)])
+            # Extract JSON from response
+            import re
+            json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
+            if json_match:
+                analysis = json.loads(json_match.group())
+                return analysis
+            return {"communication_partners": [], "work_situations": {}}
+        except Exception as e:
+            print(f"Error in conversation analysis: {e}")
+            return {"communication_partners": [], "work_situations": {}}
+
     def _get_timestamp(self) -> str:
         """
         Get current timestamp
@@ -246,8 +482,13 @@ Respond appropriately in {native_language}. If you determine the conversation is
         initial_state = {
             'step': 1,
             'communication_partners': [],
+            'all_partners_mentioned': [],  # Track all partners ever mentioned
+            'partners_covered': [],  # Track partners we've asked about
             'work_situations': {},
-            'conversation_history': []
+            'conversation_history': [],
+            'current_partner_being_asked': None,
+            'partner_sub_state': 'initial',  # 'initial', 'collecting', 'verifying_completeness'
+            'waiting_for_completeness_response': False
         }
         
         # Generate initial greeting

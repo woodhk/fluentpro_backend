@@ -21,21 +21,23 @@ from authentication.services.conversation_service import ConversationFlowService
 
 def test_conversation_flow():
     """
-    Test the conversation flow with Amy Lu's data
+    Interactive test for the conversation flow with Amy Lu's data
     """
-    # Amy Lu's data from Supabase
+    # Amy Lu's data from Supabase (using English for testing)
     user_name = "Amy Lu"
     role = "Digital Marketing Analytics Specialist"
     industry = "Banking & Finance"
-    native_language = "chinese_traditional"
+    native_language = "english"  # Changed to English for testing
     
     print("=" * 60)
-    print("Phase 2 Onboarding Conversation Flow Test")
+    print("Phase 2 Onboarding Interactive Conversation Test")
     print("=" * 60)
     print(f"User: {user_name}")
     print(f"Role: {role}")
     print(f"Industry: {industry}")
     print(f"Native Language: {native_language}")
+    print("=" * 60)
+    print("Type 'quit' at any time to exit the conversation")
     print("=" * 60)
     
     # Initialize conversation service
@@ -59,19 +61,28 @@ def test_conversation_flow():
     
     conversation_state = result.get('conversation_state')
     
-    # Simulate user responses for testing
-    test_responses = [
-        "Hello! My day is going well, thank you for asking.",
-        "Yes, I'm ready to begin. Let's do this!",
-        "I typically speak English with clients, colleagues, and senior management at our bank.",
-        "With clients, I mainly speak English during client meetings, presentations, and consultations. For colleagues, it's mostly team meetings and project discussions.",
-        "With senior management, I speak English during quarterly reviews, strategy presentations, and when reporting on analytics results."
-    ]
-    
-    for i, user_response in enumerate(test_responses, 1):
-        print(f"\n👤 User Response {i}: {user_response}")
+    # Interactive conversation loop
+    while True:
+        print("\n" + "-" * 40)
+        
+        # Get user input
+        try:
+            user_response = input("\n👤 Your response: ").strip()
+        except KeyboardInterrupt:
+            print("\n\n👋 Conversation interrupted by user. Goodbye!")
+            break
+        
+        # Check for quit command
+        if user_response.lower() in ['quit', 'exit', 'bye']:
+            print("\n👋 Thanks for testing! Goodbye!")
+            break
+        
+        if not user_response:
+            print("⚠️  Please enter a response or type 'quit' to exit.")
+            continue
         
         # Process the user message
+        print("\n🤖 Processing your response...")
         result = conversation_service.process_message(
             user_message=user_response,
             user_name=user_name,
@@ -83,27 +94,38 @@ def test_conversation_flow():
         
         if not result.get('success'):
             print(f"❌ Failed to process message: {result.get('error')}")
-            break
+            continue
         
         ai_response = result.get('ai_response')
         conversation_state = result.get('conversation_state')
         is_finished = result.get('is_finished', False)
         current_step = result.get('current_step', 1)
         
-        print(f"🤖 AI Response: {ai_response}")
+        print(f"\n🤖 AI Response: {ai_response}")
         print(f"📊 Current Step: {current_step}")
         
         if is_finished:
             print("\n🎉 Conversation finished!")
-            print("\n📋 Final Summary:")
-            print(f"Communication Partners: {conversation_state.get('communication_partners', [])}")
-            print(f"Work Situations: {conversation_state.get('work_situations', {})}")
+            
+            # Use final analysis if available, otherwise fallback to conversation state
+            final_analysis = conversation_state.get('final_analysis', {})
+            if final_analysis:
+                print("\n📋 Final Summary (Analyzed by LLM):")
+                print(f"Communication Partners: {final_analysis.get('communication_partners', [])}")
+                print(f"Work Situations: {final_analysis.get('work_situations', {})}")
+            else:
+                print("\n📋 Final Summary (From State):")
+                print(f"Communication Partners: {conversation_state.get('communication_partners', [])}")
+                print(f"Work Situations: {conversation_state.get('work_situations', {})}")
+            
+            print("\n💾 Conversation History:")
+            for i, msg in enumerate(conversation_state.get('conversation_history', []), 1):
+                speaker = "👤 You" if msg['type'] == 'user' else "🤖 AI"
+                print(f"{i}. {speaker}: {msg['content'][:100]}{'...' if len(msg['content']) > 100 else ''}")
             break
-        
-        print("-" * 40)
     
     print("\n" + "=" * 60)
-    print("Test completed!")
+    print("Interactive test completed!")
 
 
 if __name__ == "__main__":
