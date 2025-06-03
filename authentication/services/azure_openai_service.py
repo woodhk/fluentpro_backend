@@ -1,11 +1,18 @@
 import os
 from openai import AzureOpenAI
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from django.conf import settings
 from decouple import config
+import logging
+
+from core.interfaces import EmbeddingServiceInterface, LLMServiceInterface
+from core.exceptions import ValidationError, BusinessLogicError
+from authentication.models.role import JobDescription
+
+logger = logging.getLogger(__name__)
 
 
-class AzureOpenAIService:
+class AzureOpenAIService(EmbeddingServiceInterface, LLMServiceInterface):
     """
     Service class for interacting with Azure OpenAI embeddings
     """
@@ -20,23 +27,36 @@ class AzureOpenAIService:
         self.embedding_deployment = config('AZURE_OPENAI_EMBEDDING_DEPLOYMENT')
         self.chat_deployment = config('AZURE_OPENAI_CHAT_DEPLOYMENT', default='gpt-4o')
     
-    def get_embedding(self, text: str) -> List[float]:
+    def generate_embedding(self, text: str) -> List[float]:
         """
-        Get embedding vector for a given text using Azure OpenAI
+        Generate embedding vector for text (implements EmbeddingServiceInterface).
         """
         try:
+            if not text or not text.strip():
+                raise ValidationError("Text cannot be empty")
+            
             response = self.client.embeddings.create(
                 model=self.embedding_deployment,
-                input=text
+                input=text.strip()
             )
             
             if response and response.data and len(response.data) > 0:
                 return response.data[0].embedding
             else:
-                raise Exception('No embedding data returned from Azure OpenAI')
+                raise BusinessLogicError('No embedding data returned from Azure OpenAI')
                 
+        except ValidationError:
+            raise
         except Exception as e:
-            raise Exception(f'Azure OpenAI embedding error: {str(e)}')
+            logger.error(f"Azure OpenAI embedding generation failed: {str(e)}")
+            raise BusinessLogicError(f'Azure OpenAI embedding error: {str(e)}')
+    
+    def get_embedding(self, text: str) -> List[float]:
+        """
+        Legacy method - get embedding vector for a given text.
+        Kept for backward compatibility.
+        """
+        return self.generate_embedding(text)
     
     def get_role_embedding_text(self, role_data: Dict[str, Any]) -> str:
         """
@@ -60,12 +80,36 @@ class AzureOpenAIService:
         
         return embedding_text
     
-    def embed_role(self, role_data: Dict[str, Any]) -> List[float]:
+    def generate_role_embedding(self, role_data: Dict[str, Any]) -> List[float]:
         """
-        Generate embedding for a role based on its comprehensive information
+        Generate embedding for role data (implements EmbeddingServiceInterface).
         """
         embedding_text = self.get_role_embedding_text(role_data)
-        return self.get_embedding(embedding_text)
+        return self.generate_embedding(embedding_text)
+    
+    def generate_job_embedding(self, job_description: JobDescription) -> List[float]:
+        """
+        Generate embedding for job description (implements EmbeddingServiceInterface).
+        """
+        # Create comprehensive text from job description
+        embedding_text = f"Job Title: {job_description.title}\n"
+        embedding_text += f"Level: {job_description.hierarchy_level.value}\n"
+        embedding_text += f"Description: {job_description.description}\n"
+        
+        if job_description.requirements:
+            embedding_text += f"Requirements: {job_description.requirements}\n"
+        
+        if job_description.responsibilities:
+            embedding_text += f"Responsibilities: {job_description.responsibilities}"
+        
+        return self.generate_embedding(embedding_text)
+    
+    def embed_role(self, role_data: Dict[str, Any]) -> List[float]:
+        """
+        Legacy method - generate embedding for a role.
+        Kept for backward compatibility.
+        """
+        return self.generate_role_embedding(role_data)
     
     def generate_role_keywords(self, job_title: str, job_description: str) -> List[str]:
         """
@@ -111,17 +155,23 @@ Keywords:"""
             basic_keywords = job_title.lower().split()
             return [kw for kw in basic_keywords if len(kw) > 2][:5]
     
-    def rewrite_job_description(self, job_title: str, job_description: str) -> str:
+    def rewrite_role_description(
+        self, 
+        original_description: str, 
+        context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
-        Rewrite job description from first person to third person using GPT-4o
+        Rewrite role description for clarity and engagement (implements LLMServiceInterface).
         """
         try:
+            job_title = context.get('job_title', 'Role') if context else 'Role'
+            
             prompt = f"""IMPORTANT: Rewrite this job description from first-person ("I do...") to third-person ("This role involves...").
 
 Job Title: {job_title}
 
 Original Description (first-person):
-{job_description}
+{original_description}
 
 INSTRUCTIONS:
 - Change ALL "I" statements to third-person
@@ -150,17 +200,120 @@ Rewritten Description (third-person):"""
                 rewritten_description = rewritten_description.strip('"').strip("'")
                 
                 # Fallback: if LLM didn't change anything, do basic find/replace
-                if rewritten_description == job_description:
-                    rewritten_description = self._basic_first_to_third_person(job_description)
+                if rewritten_description == original_description:
+                    rewritten_description = self._basic_first_to_third_person(original_description)
                 
                 return rewritten_description
             else:
                 # Fallback: return basic conversion if LLM fails
-                return self._basic_first_to_third_person(job_description)
+                return self._basic_first_to_third_person(original_description)
                 
         except Exception as e:
+            logger.error(f"Role description rewriting failed: {str(e)}")
             # Fallback: return basic conversion if LLM fails
-            return self._basic_first_to_third_person(job_description)
+            return self._basic_first_to_third_person(original_description)
+    
+    def analyze_job_description(self, job_description: str) -> Dict[str, Any]:
+        """
+        Analyze job description and extract key information (implements LLMServiceInterface).
+        """
+        try:
+            prompt = f"""Analyze this job description and extract key information in JSON format:
+
+Job Description:
+{job_description}
+
+Please extract:
+- Required skills (technical and soft skills)
+- Experience level (entry, mid, senior, executive)
+- Industry keywords
+- Key responsibilities
+- Required qualifications
+
+Provide the response in JSON format with keys: skills, experience_level, industry_keywords, responsibilities, qualifications"""
+
+            response = self.client.chat.completions.create(
+                model=self.chat_deployment,
+                messages=[
+                    {"role": "system", "content": "You are an expert job analyst. Extract structured information from job descriptions and return valid JSON only."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=400,
+                temperature=0.1
+            )
+            
+            if response and response.choices and len(response.choices) > 0:
+                analysis_text = response.choices[0].message.content.strip()
+                try:
+                    import json
+                    return json.loads(analysis_text)
+                except json.JSONDecodeError:
+                    # Fallback if JSON parsing fails
+                    return self._basic_job_analysis(job_description)
+            else:
+                return self._basic_job_analysis(job_description)
+                
+        except Exception as e:
+            logger.error(f"Job description analysis failed: {str(e)}")
+            return self._basic_job_analysis(job_description)
+    
+    def generate_role_suggestions(
+        self, 
+        job_title: str, 
+        job_description: str,
+        industry: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate role suggestions based on job input (implements LLMServiceInterface).
+        """
+        try:
+            industry_context = f" in the {industry} industry" if industry else ""
+            
+            prompt = f"""Based on this job title and description{industry_context}, suggest 3-5 similar or related roles that might be relevant.
+
+Job Title: {job_title}
+Job Description: {job_description}
+{f"Industry: {industry}" if industry else ""}
+
+For each suggestion, provide:
+- Role title
+- Brief description (2-3 sentences)
+- Key differences from the original role
+- Seniority level
+
+Provide response in JSON format as an array of objects with keys: title, description, differences, seniority_level"""
+
+            response = self.client.chat.completions.create(
+                model=self.chat_deployment,
+                messages=[
+                    {"role": "system", "content": "You are an expert career advisor. Generate relevant role suggestions based on job descriptions and return valid JSON only."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=600,
+                temperature=0.3
+            )
+            
+            if response and response.choices and len(response.choices) > 0:
+                suggestions_text = response.choices[0].message.content.strip()
+                try:
+                    import json
+                    return json.loads(suggestions_text)
+                except json.JSONDecodeError:
+                    # Fallback if JSON parsing fails
+                    return self._basic_role_suggestions(job_title, industry)
+            else:
+                return self._basic_role_suggestions(job_title, industry)
+                
+        except Exception as e:
+            logger.error(f"Role suggestions generation failed: {str(e)}")
+            return self._basic_role_suggestions(job_title, industry)
+    
+    def rewrite_job_description(self, job_title: str, job_description: str) -> str:
+        """
+        Legacy method - rewrite job description from first person to third person.
+        Kept for backward compatibility.
+        """
+        return self.rewrite_role_description(job_description, {'job_title': job_title})
     
     def _basic_first_to_third_person(self, description: str) -> str:
         """
@@ -196,3 +349,62 @@ Rewritten Description (third-person):"""
             result = result.replace(old, new)
         
         return result
+    
+    def _basic_job_analysis(self, job_description: str) -> Dict[str, Any]:
+        """Basic fallback method for job analysis."""
+        words = job_description.lower().split()
+        
+        # Extract basic skills based on common keywords
+        tech_skills = []
+        for word in words:
+            if any(tech in word for tech in ['python', 'java', 'sql', 'react', 'aws', 'azure', 'docker']):
+                tech_skills.append(word)
+        
+        # Determine experience level based on keywords
+        experience_level = "mid"
+        if any(word in job_description.lower() for word in ['senior', 'lead', 'principal', 'architect']):
+            experience_level = "senior"
+        elif any(word in job_description.lower() for word in ['junior', 'entry', 'trainee', 'graduate']):
+            experience_level = "entry"
+        elif any(word in job_description.lower() for word in ['director', 'vp', 'chief', 'head of']):
+            experience_level = "executive"
+        
+        return {
+            "skills": tech_skills[:10],
+            "experience_level": experience_level,
+            "industry_keywords": [],
+            "responsibilities": [],
+            "qualifications": []
+        }
+    
+    def _basic_role_suggestions(self, job_title: str, industry: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Basic fallback method for role suggestions."""
+        suggestions = []
+        
+        # Generate basic suggestions based on job title
+        if "engineer" in job_title.lower():
+            suggestions.append({
+                "title": "Senior Software Engineer",
+                "description": "Advanced technical role with increased responsibilities and mentoring duties.",
+                "differences": "Higher seniority level with leadership expectations",
+                "seniority_level": "senior"
+            })
+        
+        if "analyst" in job_title.lower():
+            suggestions.append({
+                "title": "Data Scientist",
+                "description": "Advanced analytics role focusing on machine learning and statistical modeling.",
+                "differences": "More technical and focused on predictive modeling",
+                "seniority_level": "mid"
+            })
+        
+        # Add generic suggestions if no specific matches
+        if not suggestions:
+            suggestions.append({
+                "title": f"Senior {job_title}",
+                "description": f"Advanced version of {job_title} with additional responsibilities.",
+                "differences": "Higher seniority and broader scope",
+                "seniority_level": "senior"
+            })
+        
+        return suggestions[:3]

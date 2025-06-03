@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     "corsheaders",
     
     # Local apps
+    "core",
+    "shared",
+    "api", 
     "authentication",
     "onboarding",
 ]
@@ -201,6 +204,23 @@ AZURE_OPENAI_ENDPOINT = config('AZURE_OPENAI_ENDPOINT')
 AZURE_OPENAI_API_KEY = config('AZURE_OPENAI_API_KEY')
 AZURE_OPENAI_API_VERSION = config('AZURE_OPENAI_API_VERSION', default='2024-02-01')
 AZURE_OPENAI_EMBEDDING_DEPLOYMENT = config('AZURE_OPENAI_EMBEDDING_DEPLOYMENT', default='text-embedding-3-small')
+
+# Cache configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache' if config('REDIS_URL', default=None) else 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        } if config('REDIS_URL', default=None) else {},
+        'KEY_PREFIX': 'fluentpro',
+        'TIMEOUT': 300,  # 5 minutes default
+    }
+}
+
+# Cache settings
+CACHE_DEFAULT_TIMEOUT = config('CACHE_DEFAULT_TIMEOUT', default=300, cast=int)
+CACHE_KEY_PREFIX = config('CACHE_KEY_PREFIX', default='fluentpro')
 
 # JWT settings
 JWT_AUTH = {

@@ -1,5 +1,5 @@
 from django.urls import path
-from authentication.views import (
+from authentication.views.v1 import (
     SignUpView, LoginView, RefreshTokenView, 
     LogoutView, Auth0CallbackView, UserProfileView,
     JobInputView, RoleSelectionView, NewRoleCreationView
