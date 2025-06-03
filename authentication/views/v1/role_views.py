@@ -25,75 +25,152 @@ class JobInputView(AuthenticatedView, VersionedView):
     def post(self, request):
         """Process job input and return role matches."""
         try:
+            logger.info(f"JobInputView POST request received")
+            logger.info(f"Request data: {request.data}")
+            
             # Validate input
             job_title = request.data.get('job_title', '').strip()
             job_description = request.data.get('job_description', '').strip()
             
+            logger.info(f"Extracted job_title: '{job_title}', job_description: '{job_description}'")
+            
             if not job_title:
+                logger.warning("Job title is missing")
                 raise ValidationError("Job title is required")
             
             if not job_description:
+                logger.warning("Job description is missing")
                 raise ValidationError("Job description is required")
             
             # Get current user and validate industry
-            user_manager = UserManager()
-            user_profile = user_manager.get_user_profile(self.get_auth0_user_id())
+            logger.info("Getting user manager and user profile")
+            try:
+                user_manager = UserManager()
+                logger.info("UserManager created successfully")
+                
+                # Check authentication
+                auth0_user_id = self.get_auth0_user_id()
+                logger.info(f"Auth0 user ID: {auth0_user_id}")
+                
+                if not auth0_user_id:
+                    logger.error("No Auth0 user ID found")
+                    return APIResponse.error(
+                        message="Authentication required",
+                        status_code=status.HTTP_401_UNAUTHORIZED
+                    )
+                
+                user_profile = user_manager.get_user_profile(auth0_user_id)
+                logger.info(f"User profile retrieved: {user_profile is not None}")
+                
+            except AttributeError as e:
+                logger.error(f"Authentication error - missing user attributes: {str(e)}")
+                return APIResponse.error(
+                    message="Invalid authentication token",
+                    status_code=status.HTTP_401_UNAUTHORIZED
+                )
+            except Exception as e:
+                logger.error(f"Error getting user profile: {str(e)}")
+                logger.error(f"Error type: {type(e).__name__}")
+                raise
             
             if not user_profile:
+                logger.error("User profile not found")
                 return APIResponse.error(
                     message="User not found",
                     status_code=status.HTTP_404_NOT_FOUND
                 )
             
+            logger.info(f"User industry: {user_profile.industry_name}")
             if not user_profile.industry_name:
+                logger.warning("User has no industry selected")
                 raise ValidationError("Please complete industry selection first")
             
             # Use role manager for role matching
-            role_manager = RoleManager()
+            logger.info("Initializing role manager")
+            try:
+                role_manager = RoleManager()
+                logger.info("Role manager initialized successfully")
+            except Exception as e:
+                logger.error(f"Error initializing role manager: {str(e)}")
+                raise
             
             # Create job description object for role matching
-            job_description_obj = JobDescription(
-                title=job_title,
-                description=job_description,
-                industry=user_profile.industry_name
-            )
+            logger.info("Creating job description object")
+            try:
+                job_description_obj = JobDescription(
+                    title=job_title,
+                    description=job_description,
+                    industry=user_profile.industry_name
+                )
+                logger.info(f"Job description object created: {job_description_obj.search_text[:100]}...")
+            except Exception as e:
+                logger.error(f"Error creating job description object: {str(e)}")
+                raise
             
             # Find matching roles
-            matched_roles = role_manager.find_matching_roles(
-                job_description=job_description_obj,
-                industry_filter=user_profile.industry_name,
-                max_results=5
-            )
+            logger.info("Finding matching roles")
+            try:
+                matched_roles = role_manager.find_matching_roles(
+                    job_description=job_description_obj,
+                    industry_filter=user_profile.industry_name,
+                    max_results=5
+                )
+                logger.info(f"Found {len(matched_roles)} matching roles")
+                
+                # Handle empty results gracefully
+                if not matched_roles:
+                    logger.info("No matching roles found, returning empty result set")
+                    matched_roles = []
+                    
+            except Exception as e:
+                logger.error(f"Error finding matching roles: {str(e)}")
+                # Provide fallback empty result instead of failing
+                logger.warning("Returning empty results due to search error")
+                matched_roles = []
             
             # Format response
-            formatted_roles = []
-            for role_match in matched_roles:
-                formatted_roles.append({
-                    'id': role_match.role.id,
-                    'title': role_match.role.title,
-                    'description': role_match.role.description,
-                    'industry_name': role_match.role.industry_name,
-                    'hierarchy_level': role_match.role.hierarchy_level.value,
-                    'search_keywords': role_match.role.search_keywords,
-                    'relevance_score': role_match.relevance_score
-                })
+            logger.info("Formatting response")
+            try:
+                formatted_roles = []
+                for i, role_match in enumerate(matched_roles):
+                    logger.info(f"Processing role match {i+1}: {role_match.role.title}")
+                    formatted_roles.append({
+                        'id': role_match.role.id,
+                        'title': role_match.role.title,
+                        'description': role_match.role.description,
+                        'industry_name': role_match.role.industry_name,
+                        'hierarchy_level': role_match.role.hierarchy_level.value,
+                        'search_keywords': role_match.role.search_keywords,
+                        'relevance_score': role_match.relevance_score
+                    })
+                    logger.info(f"Role {i+1} formatted successfully")
+                
+                logger.info(f"All {len(formatted_roles)} roles formatted successfully")
+            except Exception as e:
+                logger.error(f"Error formatting roles: {str(e)}")
+                raise
             
-            return APIResponse.success(
-                data={
-                    'user_job_input': {
-                        'job_title': job_title,
-                        'job_description': job_description,
-                        'user_industry': user_profile.industry_name
-                    },
-                    'matched_roles': formatted_roles,
-                    'total_matches': len(formatted_roles)
-                }
-            )
+            response_data = {
+                'user_job_input': {
+                    'job_title': job_title,
+                    'job_description': job_description,
+                    'user_industry': user_profile.industry_name
+                },
+                'matched_roles': formatted_roles,
+                'total_matches': len(formatted_roles)
+            }
             
-        except (ValidationError, BusinessLogicError):
+            logger.info("Returning successful response")
+            return APIResponse.success(data=response_data)
+            
+        except (ValidationError, BusinessLogicError) as e:
+            logger.error(f"Validation/Business logic error: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"Job input processing error: {str(e)}")
+            logger.error(f"Unexpected error in JobInputView: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return APIResponse.error(
                 message="Job input processing failed",
                 details=str(e),

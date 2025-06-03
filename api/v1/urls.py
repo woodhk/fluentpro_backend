@@ -10,6 +10,7 @@ from authentication.views.v1 import (
     SignUpView, LoginView, RefreshTokenView, LogoutView, Auth0CallbackView,
     UserProfileView, JobInputView, RoleSelectionView, NewRoleCreationView
 )
+from test_endpoint import HealthCheckView
 from onboarding.views.v1 import (
     SetNativeLanguageView, GetAvailableLanguagesView,
     SetIndustryView, GetAvailableIndustriesView,
@@ -67,6 +68,9 @@ onboarding_patterns = [
 ]
 
 urlpatterns = [
+    # Health check
+    path('health/', HealthCheckView.as_view(), name='health_check'),
+    
     # Authentication
     path('auth/', include(auth_patterns)),
     
