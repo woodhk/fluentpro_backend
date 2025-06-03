@@ -75,7 +75,7 @@ class JobInputView(AuthenticatedView, VersionedView):
                     'industry_name': role_match.role.industry_name,
                     'hierarchy_level': role_match.role.hierarchy_level.value,
                     'search_keywords': role_match.role.search_keywords,
-                    'relevance_score': role_match.similarity_score
+                    'relevance_score': role_match.relevance_score
                 })
             
             return APIResponse.success(
@@ -302,7 +302,7 @@ class RoleSearchView(CachedView, VersionedView):
                     'description': role_match.role.description,
                     'industry_name': role_match.role.industry_name,
                     'hierarchy_level': role_match.role.hierarchy_level.value,
-                    'relevance_score': role_match.similarity_score
+                    'relevance_score': role_match.relevance_score
                 })
             
             results_data = {

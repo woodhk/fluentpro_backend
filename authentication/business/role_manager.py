@@ -370,6 +370,122 @@ class RoleManager:
             logger.error(f"Failed to record role selection: {str(e)}")
             raise BusinessLogicError(f"Failed to record role selection: {str(e)}")
     
+    def search_roles(
+        self,
+        query: str,
+        industry_filter: Optional[str] = None,
+        limit: int = 10
+    ) -> List[RoleMatch]:
+        """
+        Search for roles using text query.
+        
+        Args:
+            query: Search text query
+            industry_filter: Optional industry filter
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of RoleMatch instances sorted by relevance
+        """
+        try:
+            # Create a simple job description for search
+            job_description = JobDescription(
+                title=query,
+                description=query,
+                industry=industry_filter
+            )
+            
+            # Use existing find_matching_roles method
+            return self.find_matching_roles(
+                job_description=job_description,
+                industry_filter=industry_filter,
+                max_results=limit
+            )
+            
+        except Exception as e:
+            logger.error(f"Role search failed: {str(e)}")
+            raise BusinessLogicError(f"Failed to search roles: {str(e)}")
+    
+    def track_role_selection(
+        self,
+        auth0_id: str,
+        role_id: str,
+        source: str,
+        original_description: Optional[str] = None
+    ) -> None:
+        """
+        Track a user's role selection.
+        
+        Args:
+            auth0_id: User's Auth0 ID
+            role_id: Selected role ID
+            source: Role source ('selected' or 'created')
+            original_description: Original job description if role was created
+        """
+        try:
+            # Use existing record_role_selection method
+            role_source = RoleSource.SELECTED if source == 'selected' else RoleSource.CREATED
+            role_details = {}
+            if original_description:
+                role_details['original_description'] = original_description
+            
+            self.record_role_selection(
+                user_id=auth0_id,
+                role_id=role_id,
+                role_source=role_source,
+                role_details=role_details
+            )
+            
+        except Exception as e:
+            logger.warning(f"Failed to track role selection: {str(e)}")
+    
+    def create_new_role(
+        self,
+        title: str,
+        description: str,
+        industry_id: str,
+        hierarchy_level: str,
+        created_by_user_id: str
+    ) -> Role:
+        """
+        Create a new role (wrapper for create_custom_role).
+        
+        Args:
+            title: Role title
+            description: Role description
+            industry_id: Industry ID
+            hierarchy_level: Hierarchy level
+            created_by_user_id: User ID who created the role
+            
+        Returns:
+            Created Role instance
+        """
+        try:
+            # Convert hierarchy level to enum
+            hierarchy_enum = HierarchyLevel.ASSOCIATE
+            try:
+                hierarchy_enum = HierarchyLevel(hierarchy_level)
+            except ValueError:
+                pass  # Keep default if invalid
+            
+            # Create job description object
+            job_description = JobDescription(
+                title=title,
+                description=description,
+                hierarchy_level=hierarchy_enum
+            )
+            
+            # Use existing create_custom_role method
+            return self.create_custom_role(
+                job_description=job_description,
+                industry_id=industry_id,
+                created_by_user_id=created_by_user_id
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create new role: {str(e)}")
+            raise BusinessLogicError(f"Failed to create new role: {str(e)}")
+    
     def get_role_statistics(self) -> Dict[str, Any]:
         """
         Get statistics about roles and usage.
