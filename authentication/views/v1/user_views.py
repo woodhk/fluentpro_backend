@@ -13,7 +13,7 @@ from authentication.business.user_manager import UserManager
 logger = logging.getLogger(__name__)
 
 
-class UserProfileView(AuthenticatedView, CachedView, VersionedView):
+class UserProfileView(CachedView, VersionedView):
     """
     User profile endpoint with caching support.
     Returns current user's profile information.
