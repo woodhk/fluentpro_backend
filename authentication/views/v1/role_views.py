@@ -11,6 +11,7 @@ from core.responses import APIResponse
 from core.exceptions import ValidationError, BusinessLogicError
 from authentication.business.user_manager import UserManager
 from authentication.business.role_manager import RoleManager
+from authentication.models.role import JobDescription
 
 logger = logging.getLogger(__name__)
 
@@ -50,18 +51,18 @@ class JobInputView(AuthenticatedView, VersionedView):
             # Use role manager for role matching
             role_manager = RoleManager()
             
-            # Create job input for embedding and search
-            job_input = {
-                'title': job_title,
-                'description': job_description,
-                'industry': user_profile.industry_name
-            }
+            # Create job description object for role matching
+            job_description_obj = JobDescription(
+                title=job_title,
+                description=job_description,
+                industry=user_profile.industry_name
+            )
             
             # Find matching roles
             matched_roles = role_manager.find_matching_roles(
-                job_input=job_input,
+                job_description=job_description_obj,
                 industry_filter=user_profile.industry_name,
-                limit=5
+                max_results=5
             )
             
             # Format response
