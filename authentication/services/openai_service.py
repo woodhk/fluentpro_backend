@@ -152,11 +152,14 @@ class OpenAIService(EmbeddingServiceInterface, LLMServiceInterface):
         embedding_text += f"Level: {job_description.hierarchy_level.value}\n"
         embedding_text += f"Description: {job_description.description}\n"
         
-        if job_description.requirements:
-            embedding_text += f"Requirements: {job_description.requirements}\n"
+        if job_description.industry:
+            embedding_text += f"Industry: {job_description.industry}\n"
         
-        if job_description.responsibilities:
-            embedding_text += f"Responsibilities: {job_description.responsibilities}"
+        if job_description.required_skills:
+            embedding_text += f"Required Skills: {', '.join(job_description.required_skills)}\n"
+        
+        if job_description.preferred_skills:
+            embedding_text += f"Preferred Skills: {', '.join(job_description.preferred_skills)}"
         
         return self.generate_embedding(embedding_text)
     
