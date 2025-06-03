@@ -20,6 +20,7 @@ from onboarding.models.communication import (
     UserCommunicationNeed
 )
 from authentication.services.supabase_service import SupabaseService
+from authentication.models.user import OnboardingStatus
 
 logger = logging.getLogger(__name__)
 
@@ -521,3 +522,143 @@ class CommunicationManager:
         except Exception as e:
             logger.error(f"Failed to get communication statistics: {str(e)}")
             raise BusinessLogicError(f"Failed to retrieve statistics: {str(e)}")
+    
+    # Alias methods to match what the views expect
+    def get_available_partners(self) -> List[CommunicationPartner]:
+        """Alias for get_available_communication_partners."""
+        return self.get_available_communication_partners()
+    
+    def get_user_partners(self, user_id: str) -> List[UserCommunicationPartnerSelection]:
+        """Alias for get_user_communication_partners."""
+        return self.get_user_communication_partners(user_id)
+    
+    def get_user_units(self, user_id: str, partner_id: str) -> List[UserUnitSelection]:
+        """Alias for get_units_for_partner."""
+        return self.get_units_for_partner(user_id, partner_id)
+    
+    def save_partner_selections(
+        self,
+        user_id: str,
+        partner_ids: List[str],
+        custom_partners: Optional[List[str]] = None
+    ) -> List[UserCommunicationPartnerSelection]:
+        """
+        Save partner selections and update session phase.
+        Alias for select_communication_partners with session phase update.
+        """
+        try:
+            # Call the main method
+            selections = self.select_communication_partners(user_id, partner_ids, custom_partners)
+            
+            # Update session phase to course_assignment after communication partners are selected
+            self._update_user_session_phase_after_partners(user_id)
+            
+            return selections
+            
+        except Exception as e:
+            logger.error(f"Failed to save partner selections: {str(e)}")
+            raise
+    
+    def save_unit_selections(
+        self,
+        user_id: str,
+        partner_id: str,
+        unit_ids: List[str],
+        custom_units: Optional[List[str]] = None
+    ) -> List[UserUnitSelection]:
+        """
+        Save unit selections and potentially update session phase.
+        Alias for select_units_for_partner with session phase update.
+        """
+        try:
+            # Call the main method
+            selections = self.select_units_for_partner(user_id, partner_id, unit_ids, custom_units)
+            
+            # Check if all partners have units selected and advance phase if needed
+            self._check_and_advance_communication_phase(user_id)
+            
+            return selections
+            
+        except Exception as e:
+            logger.error(f"Failed to save unit selections: {str(e)}")
+            raise
+    
+    def _update_user_session_phase_after_partners(self, user_id: str) -> None:
+        """
+        Update user session phase after communication partners are selected.
+        """
+        try:
+            # Get user auth0_id
+            user_response = self.supabase_service.client.table('users')\
+                .select('auth0_id')\
+                .eq('id', user_id)\
+                .execute()
+            
+            if not user_response.data:
+                logger.warning(f"User not found for session phase update: {user_id}")
+                return
+            
+            auth0_id = user_response.data[0]['auth0_id']
+            
+            # Update session phase to course_assignment (next phase after personalisation)
+            self.supabase_service.client.table('user_sessions')\
+                .update({'phase': 'course_assignment', 'updated_at': datetime.utcnow().isoformat()})\
+                .eq('user_id', user_id)\
+                .eq('is_active', True)\
+                .execute()
+            
+            # Also update onboarding status
+            self.supabase_service.client.table('users')\
+                .update({'onboarding_status': OnboardingStatus.COURSE_ASSIGNMENT.value})\
+                .eq('id', user_id)\
+                .execute()
+            
+            logger.info(f"Updated session phase to 'course_assignment' and onboarding status for user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to update session phase after partner selection: {str(e)}")
+    
+    def _check_and_advance_communication_phase(self, user_id: str) -> None:
+        """
+        Check if communication setup is complete and advance to final phase if needed.
+        """
+        try:
+            # Check if user has selected partners
+            partners_response = self.supabase_service.client.table('user_communication_partners')\
+                .select('communication_partner_id')\
+                .eq('user_id', user_id)\
+                .execute()
+            
+            if not partners_response.data:
+                return  # No partners selected yet
+            
+            # Check if all partners have units selected
+            partner_ids = [p['communication_partner_id'] for p in partners_response.data]
+            
+            for partner_id in partner_ids:
+                units_response = self.supabase_service.client.table('user_partner_units')\
+                    .select('id')\
+                    .eq('user_id', user_id)\
+                    .eq('communication_partner_id', partner_id)\
+                    .execute()
+                
+                if not units_response.data:
+                    return  # This partner doesn't have units yet, don't advance
+            
+            # All partners have units - advance to completed phase
+            self.supabase_service.client.table('user_sessions')\
+                .update({'phase': 'completed', 'updated_at': datetime.utcnow().isoformat()})\
+                .eq('user_id', user_id)\
+                .eq('is_active', True)\
+                .execute()
+            
+            # Also update onboarding status to completed
+            self.supabase_service.client.table('users')\
+                .update({'onboarding_status': OnboardingStatus.COMPLETED.value})\
+                .eq('id', user_id)\
+                .execute()
+            
+            logger.info(f"Advanced user {user_id} to completed phase and status - all communication setup done")
+            
+        except Exception as e:
+            logger.error(f"Failed to check communication phase completion: {str(e)}")

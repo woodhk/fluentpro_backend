@@ -18,7 +18,7 @@ class OnboardingStatus(Enum):
     PENDING = "pending"
     WELCOME = "welcome"
     BASIC_INFO = "basic_info"
-    AI_CONVERSATION = "ai_conversation"
+    PERSONALISATION = "personalisation"
     COURSE_ASSIGNMENT = "course_assignment"
     COMPLETED = "completed"
 

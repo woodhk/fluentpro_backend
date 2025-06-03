@@ -16,6 +16,7 @@ from core.responses import ServiceResponse
 from core.interfaces import UserRepositoryInterface, IndustryRepositoryInterface
 from core.services import ServiceMixin
 from authentication.models.user import User, UserProfile, NativeLanguage, OnboardingStatus
+from authentication.services.supabase_service import SupabaseService
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class UserManager(ServiceMixin):
         super().__init__()
         self.user_repository = user_repository or self.services.users
         self.industry_repository = industry_repository or self.services.industries
+        self.supabase_service = SupabaseService()
     
     def get_user_by_auth0_id(self, auth0_id: str) -> Optional[User]:
         """
@@ -156,6 +158,9 @@ class UserManager(ServiceMixin):
             update_data = {'native_language': language}
             updated_user = self.user_repository.update(user.id, update_data)
             
+            # Check if we should advance to personalisation phase
+            self._check_and_advance_basic_info_phase(auth0_id)
+            
             return {
                 'success': True,
                 'user_id': updated_user.id,
@@ -197,6 +202,9 @@ class UserManager(ServiceMixin):
             # Update using repository
             update_data = {'industry_id': industry_id}
             updated_user = self.user_repository.update(user.id, update_data)
+            
+            # Check if we should advance to personalisation phase
+            self._check_and_advance_basic_info_phase(auth0_id)
             
             return {
                 'success': True,
@@ -242,6 +250,9 @@ class UserManager(ServiceMixin):
             # Update using repository
             update_data = {'selected_role_id': role_id}
             updated_user = self.user_repository.update(user.id, update_data)
+            
+            # Check if we should advance to personalisation phase
+            self._check_and_advance_basic_info_phase(auth0_id)
             
             # Get role title for response (if role repository available)
             role_title = role.title if role_repository and role else None
@@ -350,3 +361,56 @@ class UserManager(ServiceMixin):
         except Exception as e:
             logger.error(f"Failed to deactivate user {auth0_id}: {str(e)}")
             raise BusinessLogicError(f"Failed to deactivate user: {str(e)}")
+    
+    def _update_user_session_phase(self, auth0_id: str, new_phase: str) -> None:
+        """
+        Update user session phase.
+        
+        Args:
+            auth0_id: Auth0 user identifier
+            new_phase: New session phase
+        """
+        try:
+            # Get user by auth0_id
+            user = self.user_repository.get_by_auth0_id(auth0_id)
+            if not user:
+                logger.warning(f"User not found for session phase update: {auth0_id}")
+                return
+            
+            # Update user session phase in database
+            self.supabase_service.client.table('user_sessions')\
+                .update({'phase': new_phase, 'updated_at': datetime.utcnow().isoformat()})\
+                .eq('user_id', user.id)\
+                .eq('is_active', True)\
+                .execute()
+            
+            logger.info(f"Updated session phase to '{new_phase}' for user {user.id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to update session phase for {auth0_id}: {str(e)}")
+            # Don't raise here - session phase update is not critical enough to fail the main operation
+    
+    def _check_and_advance_basic_info_phase(self, auth0_id: str) -> None:
+        """
+        Check if basic info is complete and advance to personalisation phase.
+        
+        Args:
+            auth0_id: Auth0 user identifier
+        """
+        try:
+            user_profile = self.get_user_profile(auth0_id)
+            if not user_profile:
+                return
+            
+            # Check if all basic info is completed
+            if (user_profile.native_language and 
+                user_profile.industry_id and 
+                user_profile.selected_role_id):
+                
+                # Update both session phase and onboarding status
+                self._update_user_session_phase(auth0_id, 'personalisation')
+                self.update_onboarding_status(auth0_id, OnboardingStatus.PERSONALISATION)
+                logger.info(f"Advanced user {auth0_id} to personalisation phase and status")
+                
+        except Exception as e:
+            logger.error(f"Failed to check basic info completion for {auth0_id}: {str(e)}")
