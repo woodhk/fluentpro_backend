@@ -8,6 +8,7 @@ requests==2.32.3
 gunicorn==21.2.0
 whitenoise==6.5.0
 openai>=1.40.0,<2.0.0
+tenacity>=8.2.0
 azure-search-documents==11.5.2
 python-dotenv
 langchain>=0.3.15

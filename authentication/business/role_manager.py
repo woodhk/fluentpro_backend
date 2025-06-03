@@ -19,7 +19,7 @@ from authentication.models.role import (
 )
 from authentication.services.supabase_service import SupabaseService
 from authentication.services.azure_search_service import AzureSearchService
-from authentication.services.azure_openai_service import AzureOpenAIService
+from authentication.services.openai_service import OpenAIService
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +34,11 @@ class RoleManager:
         self,
         supabase_service: Optional[SupabaseService] = None,
         azure_search_service: Optional[AzureSearchService] = None,
-        azure_openai_service: Optional[AzureOpenAIService] = None
+        openai_service: Optional[OpenAIService] = None
     ):
         self.supabase_service = supabase_service or SupabaseService()
         self.azure_search_service = azure_search_service or AzureSearchService()
-        self.azure_openai_service = azure_openai_service or AzureOpenAIService()
+        self.openai_service = openai_service or OpenAIService()
     
     def find_matching_roles(
         self, 
@@ -64,7 +64,7 @@ class RoleManager:
         try:
             # Generate embedding for job description
             try:
-                query_embedding = self.azure_openai_service.get_embedding(job_description.search_text)
+                query_embedding = self.openai_service.get_embedding(job_description.search_text)
             except Exception as e:
                 logger.error(f"Failed to generate embedding for job search: {str(e)}")
                 raise AzureOpenAIError(f"Failed to generate search embedding: {str(e)}")
@@ -170,7 +170,7 @@ class RoleManager:
             
             # Rewrite description from first person to third person
             try:
-                rewritten_description = self.azure_openai_service.rewrite_job_description(
+                rewritten_description = self.openai_service.rewrite_job_description(
                     job_description.title,
                     job_description.description
                 )
@@ -180,7 +180,7 @@ class RoleManager:
             
             # Generate keywords using AI
             try:
-                generated_keywords = self.azure_openai_service.generate_role_keywords(
+                generated_keywords = self.openai_service.generate_role_keywords(
                     job_description.title,
                     job_description.description
                 )

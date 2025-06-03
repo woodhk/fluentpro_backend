@@ -20,7 +20,7 @@ from azure.core.credentials import AzureKeyCredential
 from typing import List, Dict, Any, Optional
 from decouple import config
 import json
-from .azure_openai_service import AzureOpenAIService
+from .openai_service import OpenAIService
 
 
 class AzureSearchService:
@@ -49,8 +49,8 @@ class AzureSearchService:
             credential=self.credential
         )
         
-        # Initialize Azure OpenAI service for on-the-fly embedding generation
-        self.azure_openai_service = AzureOpenAIService()
+        # Initialize OpenAI service for on-the-fly embedding generation
+        self.openai_service = OpenAIService()
     
     def create_roles_index(self) -> Dict[str, Any]:
         """
@@ -154,9 +154,9 @@ class AzureSearchService:
             for role in roles_data:
                 print(f"   🔄 Processing: {role.get('title', 'Unknown')}")
                 
-                # Generate embedding on-the-fly using Azure OpenAI
+                # Generate embedding on-the-fly using OpenAI
                 try:
-                    embedding_vector = self.azure_openai_service.embed_role(role)
+                    embedding_vector = self.openai_service.embed_role(role)
                     print(f"      ✅ Generated embedding: {len(embedding_vector)} dimensions")
                 except Exception as e:
                     print(f"      ❌ Failed to generate embedding: {str(e)}")
@@ -358,9 +358,9 @@ class AzureSearchService:
         try:
             print(f"   🔄 Adding new role to Azure Search: {role_data.get('title', 'Unknown')}")
             
-            # Generate embedding on-the-fly using Azure OpenAI
+            # Generate embedding on-the-fly using OpenAI
             try:
-                embedding_vector = self.azure_openai_service.embed_role(role_data)
+                embedding_vector = self.openai_service.embed_role(role_data)
                 print(f"      ✅ Generated embedding: {len(embedding_vector)} dimensions")
             except Exception as e:
                 print(f"      ❌ Failed to generate embedding: {str(e)}")
