@@ -59,6 +59,24 @@ class IndustryRepository(IndustryRepositoryInterface):
             logger.error(f"Failed to get industry by ID {industry_id}: {str(e)}")
             raise DatabaseError(f"Failed to retrieve industry: {str(e)}")
     
+    def get_by_name(self, industry_name: str) -> Optional[Dict[str, Any]]:
+        """Get industry by name."""
+        try:
+            response = self.supabase.client.table('industries')\
+                .select('*')\
+                .eq('name', industry_name)\
+                .eq('status', 'available')\
+                .execute()
+            
+            if not response.data:
+                return None
+            
+            return response.data[0]
+            
+        except Exception as e:
+            logger.error(f"Failed to get industry by name {industry_name}: {str(e)}")
+            raise DatabaseError(f"Failed to retrieve industry: {str(e)}")
+    
     def create(self, industry_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new industry."""
         try:

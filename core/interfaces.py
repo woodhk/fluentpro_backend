@@ -120,6 +120,11 @@ class IndustryRepositoryInterface(ABC):
         pass
     
     @abstractmethod
+    def get_by_name(self, industry_name: str) -> Optional[Dict[str, Any]]:
+        """Get industry by name."""
+        pass
+    
+    @abstractmethod
     def create(self, industry_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new industry."""
         pass

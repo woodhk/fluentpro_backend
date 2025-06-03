@@ -175,7 +175,7 @@ class UserManager(ServiceMixin):
     
     def update_industry(self, auth0_id: str, industry_id: str) -> Dict[str, Any]:
         """
-        Update user's industry.
+        Update user's industry by ID.
         
         Args:
             auth0_id: Auth0 user identifier
@@ -217,6 +217,36 @@ class UserManager(ServiceMixin):
             raise
         except Exception as e:
             logger.error(f"Failed to update industry for {auth0_id}: {str(e)}")
+            raise BusinessLogicError(f"Failed to update industry: {str(e)}")
+    
+    def update_industry_by_name(self, auth0_id: str, industry_name: str) -> Dict[str, Any]:
+        """
+        Update user's industry by name.
+        
+        Args:
+            auth0_id: Auth0 user identifier
+            industry_name: Industry name
+            
+        Returns:
+            Update result with industry information
+            
+        Raises:
+            ValidationError: If industry is invalid
+            SupabaseUserNotFoundError: If user not found
+        """
+        try:
+            # Validate industry exists by name
+            industry = self.industry_repository.get_by_name(industry_name)
+            if not industry:
+                raise ValidationError(f"Industry with name '{industry_name}' not found")
+            
+            # Use the existing update_industry method with the found industry_id
+            return self.update_industry(auth0_id, industry['id'])
+            
+        except (ValidationError, SupabaseUserNotFoundError):
+            raise
+        except Exception as e:
+            logger.error(f"Failed to update industry by name for {auth0_id}: {str(e)}")
             raise BusinessLogicError(f"Failed to update industry: {str(e)}")
     
     def update_selected_role(self, auth0_id: str, role_id: str) -> Dict[str, Any]:

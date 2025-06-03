@@ -24,20 +24,25 @@ class SetIndustryView(AuthenticatedView, VersionedView):
         """Set user's industry."""
         try:
             industry_id = request.data.get('industry_id')
+            industry_name = request.data.get('industry_name')
             
-            if not industry_id:
-                raise ValidationError("industry_id is required")
+            if not industry_id and not industry_name:
+                raise ValidationError("Either industry_id or industry_name is required")
             
             # Update user's industry
             auth0_id = self.get_auth0_user_id()
             user_manager = UserManager()
             
-            result = user_manager.update_industry(auth0_id, industry_id)
+            # Choose method based on which parameter is provided
+            if industry_name:
+                result = user_manager.update_industry_by_name(auth0_id, industry_name)
+            else:
+                result = user_manager.update_industry(auth0_id, industry_id)
             
             return APIResponse.success(
                 data={
                     'message': 'Industry updated successfully',
-                    'industry_id': industry_id,
+                    'industry_id': result.get('industry_id'),
                     'industry_name': result.get('industry_name'),
                     'user_id': result.get('user_id')
                 }
