@@ -147,15 +147,17 @@ class UserRepository(UserRepositoryInterface):
     def get_profile(self, user_id: str) -> Optional[UserProfile]:
         """Get user profile."""
         try:
-            response = self.supabase.client.table('users')\
-                .select('*, industries(name), roles(title)')\
-                .eq('id', user_id)\
-                .execute()
-            
-            if not response.data:
+            # First get the auth0_id for this user
+            user = self.get_by_id(user_id)
+            if not user:
                 return None
             
-            return UserProfile.from_supabase_data(response.data[0])
+            # Use the existing get_user_full_profile method which properly handles nested data
+            profile_data = self.supabase.get_user_full_profile(user.auth0_id)
+            if not profile_data:
+                return None
+            
+            return UserProfile.from_supabase_data(profile_data)
             
         except Exception as e:
             logger.error(f"Failed to get user profile {user_id}: {str(e)}")
