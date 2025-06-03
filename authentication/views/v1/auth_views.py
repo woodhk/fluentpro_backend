@@ -62,12 +62,17 @@ class SignUpView(PublicView, VersionedView):
             # Create user in Auth0
             auth0_user = auth_service.create_user(user_data)
             
-            # Add Auth0 ID to user data for internal creation
-            user_data['auth0_id'] = auth0_user['user_id']
-            user_data['is_active'] = True
+            # Prepare data for internal database (exclude password)
+            internal_user_data = {
+                'email': user_data['email'],
+                'full_name': user_data['full_name'],
+                'date_of_birth': user_data['date_of_birth'],
+                'auth0_id': auth0_user['user_id'],
+                'is_active': True
+            }
             
             # Create user in internal database
-            internal_user = user_manager.create_user(user_data)
+            internal_user = user_manager.create_user(internal_user_data)
             
             # Authenticate the user to get tokens
             token_info = auth_service.authenticate(user_data['email'], user_data['password'])
