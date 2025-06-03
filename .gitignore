@@ -26,4 +26,6 @@ staticfiles/
 .DS_Store
 Thumbs.db
 
-
+# MCP and documentation files
+.mcp.json
+*.md
