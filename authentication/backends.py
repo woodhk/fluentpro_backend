@@ -1,6 +1,7 @@
 import json
-import jwt
 import requests
+from jose import jwt
+from jose.exceptions import JWTError, ExpiredSignatureError, JWTClaimsError
 from django.contrib.auth.models import AnonymousUser
 from django.conf import settings
 from rest_framework import authentication, exceptions
@@ -29,7 +30,7 @@ class Auth0JWTAuthentication(authentication.BaseAuthentication):
             
         try:
             payload = self.verify_token(token)
-        except jwt.PyJWTError as e:
+        except (JWTError, ExpiredSignatureError, JWTClaimsError) as e:
             raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
             
         user = self.get_or_create_user(payload)
@@ -39,61 +40,62 @@ class Auth0JWTAuthentication(authentication.BaseAuthentication):
         """
         Verify the Auth0 JWT token
         """
-        # Get the JWT signing keys from Auth0
-        jwks_url = f'https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json'
-        jwks = requests.get(jwks_url).json()
-        
-        # Get the key id from the token header
-        unverified_header = jwt.get_unverified_header(token)
-        
-        # Find the key
-        rsa_key = {}
-        for key in jwks['keys']:
-            if key['kid'] == unverified_header['kid']:
-                rsa_key = {
-                    'kty': key['kty'],
-                    'kid': key['kid'],
-                    'use': key['use'],
-                    'n': key['n'],
-                    'e': key['e']
-                }
-                break
-                
-        if rsa_key:
-            try:
-                # Verify the token
-                payload = jwt.decode(
-                    token,
-                    rsa_key,
-                    algorithms=['RS256'],
-                    audience=settings.AUTH0_AUDIENCE,
-                    issuer=f'https://{settings.AUTH0_DOMAIN}/'
-                )
-                return payload
-            except jwt.ExpiredSignatureError:
-                raise exceptions.AuthenticationFailed('Token has expired')
-            except jwt.InvalidAudienceError:
+        try:
+            # Get the JWT signing keys from Auth0
+            jwks_url = f'https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json'
+            jwks_response = requests.get(jwks_url, timeout=10)
+            jwks_response.raise_for_status()
+            jwks = jwks_response.json()
+            
+            # Get the key id from the token header
+            unverified_header = jwt.get_unverified_header(token)
+            
+            # Find the key
+            rsa_key = None
+            for key in jwks['keys']:
+                if key['kid'] == unverified_header['kid']:
+                    rsa_key = key
+                    break
+                    
+            if not rsa_key:
+                raise exceptions.AuthenticationFailed('Unable to find appropriate key')
+            
+            # Verify the token using python-jose
+            payload = jwt.decode(
+                token,
+                rsa_key,
+                algorithms=['RS256'],
+                audience=settings.AUTH0_AUDIENCE,
+                issuer=f'https://{settings.AUTH0_DOMAIN}/'
+            )
+            return payload
+            
+        except ExpiredSignatureError:
+            raise exceptions.AuthenticationFailed('Token has expired')
+        except JWTClaimsError as e:
+            if 'audience' in str(e).lower():
                 raise exceptions.AuthenticationFailed('Invalid audience')
-            except jwt.InvalidIssuerError:
+            elif 'issuer' in str(e).lower():
                 raise exceptions.AuthenticationFailed('Invalid issuer')
-            except Exception as e:
-                raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
-        else:
-            raise exceptions.AuthenticationFailed('Unable to find appropriate key')
+            else:
+                raise exceptions.AuthenticationFailed(f'Token claims error: {str(e)}')
+        except requests.RequestException as e:
+            raise exceptions.AuthenticationFailed(f'Failed to fetch JWKS: {str(e)}')
+        except JWTError as e:
+            raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
+        except Exception as e:
+            raise exceptions.AuthenticationFailed(f'Token verification failed: {str(e)}')
     
     def get_or_create_user(self, payload):
         """
         Get or create a user based on the Auth0 payload
-        We'll return a simple user object that can be used in views
+        Returns a simple user object that can be used in views
         """
-        from authentication.models import SimpleUser
-        
         # Extract user information from the payload
         auth0_user_id = payload.get('sub')
         email = payload.get('email')
         
-        # In a production environment, you might want to create actual Django users
-        # For now, we'll return a simple user object
+        # Create a simple user object for authentication
         user = SimpleUser(
             auth0_id=auth0_user_id,
             email=email,
@@ -101,3 +103,31 @@ class Auth0JWTAuthentication(authentication.BaseAuthentication):
         )
         
         return user
+
+
+class SimpleUser:
+    """
+    Simple user object for JWT authentication that mimics Django User interface
+    """
+    def __init__(self, auth0_id=None, email=None, is_authenticated=False):
+        self.auth0_id = auth0_id
+        self.email = email
+        self.is_authenticated = is_authenticated
+        self.is_anonymous = False
+        self.is_active = True
+        # Store auth0_id as 'sub' for compatibility with existing code
+        self.sub = auth0_id
+    
+    @property
+    def is_staff(self):
+        return False
+    
+    @property
+    def is_superuser(self):
+        return False
+    
+    def get_username(self):
+        return self.email or self.auth0_id
+    
+    def __str__(self):
+        return self.get_username() or 'Anonymous'
