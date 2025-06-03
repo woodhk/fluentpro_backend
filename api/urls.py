@@ -14,7 +14,4 @@ urlpatterns = [
     
     # API version 1
     path('v1/', include('api.v1.urls', namespace='v1')),
-    
-    # Default to v1 for backward compatibility
-    path('', include('api.v1.urls')),
 ]

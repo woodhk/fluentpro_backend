@@ -1,6 +1,6 @@
 """
-Refactored view examples using Phase 2 business logic architecture.
-These examples demonstrate how to replace the monolithic views.py with clean, focused views.
+Refactored view examples demonstrating modern clean architecture patterns.
+These examples show the evolution from legacy code to clean, focused views.
 """
 
 from core.mixins import BaseFluentProView, PublicBaseView
@@ -15,7 +15,7 @@ from authentication.business.user_manager import UserManager
 class RefactoredSignUpView(PublicBaseView):
     """
     Refactored signup view using use case pattern.
-    Replaces the complex SignUpView from views.py (lines 23-94).
+    Clean implementation with proper separation of concerns.
     """
     
     def post(self, request):
@@ -32,7 +32,7 @@ class RefactoredSignUpView(PublicBaseView):
 class RefactoredLoginView(PublicBaseView):
     """
     Refactored login view using use case pattern.
-    Replaces the complex LoginView from views.py (lines 98-161).
+    Clean authentication implementation with proper error handling.
     """
     
     def post(self, request):
@@ -55,7 +55,7 @@ class RefactoredLoginView(PublicBaseView):
 class RefactoredRefreshTokenView(PublicBaseView):
     """
     Refactored token refresh view.
-    Replaces RefreshTokenView from views.py (lines 165-201).
+    Simple token refresh with clean response handling.
     """
     
     def post(self, request):
@@ -70,7 +70,7 @@ class RefactoredRefreshTokenView(PublicBaseView):
 class RefactoredLogoutView(BaseFluentProView):
     """
     Refactored logout view.
-    Replaces LogoutView from views.py (lines 205-236).
+    Clean logout implementation with proper session handling.
     """
     
     def post(self, request):
@@ -87,7 +87,7 @@ class RefactoredLogoutView(BaseFluentProView):
 class RefactoredUserProfileView(BaseFluentProView):
     """
     Refactored user profile view.
-    Replaces UserProfileView from views.py (lines 270-304).
+    User profile retrieval with caching and clean response format.
     """
     
     def get(self, request):
@@ -102,7 +102,7 @@ class RefactoredUserProfileView(BaseFluentProView):
 class RefactoredJobInputView(BaseFluentProView):
     """
     Refactored job input view using role matching use case.
-    Replaces the massive JobInputView from views.py (lines 307-402).
+    Job input processing with role matching and clean validation.
     """
     
     @validate_json_payload('job_title', 'job_description')
@@ -123,7 +123,7 @@ class RefactoredJobInputView(BaseFluentProView):
 class RefactoredRoleSelectionView(BaseFluentProView):
     """
     Refactored role selection view.
-    Replaces RoleSelectionView from views.py (lines 405-472).
+    Role selection with proper business logic separation.
     """
     
     @validate_json_payload('role_id')
@@ -142,7 +142,7 @@ class RefactoredRoleSelectionView(BaseFluentProView):
 class RefactoredNewRoleCreationView(BaseFluentProView):
     """
     Refactored new role creation view.
-    Replaces the complex NewRoleCreationView from views.py (lines 475-640).
+    New role creation with Azure search integration and validation.
     """
     
     @validate_json_payload('job_title', 'job_description')
@@ -251,7 +251,7 @@ class SessionValidationView(BaseFluentProView):
 
 # Comparison: Lines of Code Reduction
 """
-BEFORE (views.py):
+BEFORE (legacy implementation):
 - SignUpView: ~70 lines
 - LoginView: ~65 lines  
 - RefreshTokenView: ~35 lines

@@ -20,10 +20,6 @@ from django.urls import path, include
 urlpatterns = [
     path("admin/", admin.site.urls),
     
-    # New versioned API structure
+    # Modern versioned API structure
     path("api/", include('api.urls')),
-    
-    # Legacy endpoints for backward compatibility (with different namespaces)
-    path("api/v1/auth/", include('authentication.urls', namespace='auth')),
-    path("api/v1/onboarding/", include('onboarding.urls', namespace='onboarding')),
 ]

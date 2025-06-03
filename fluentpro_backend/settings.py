@@ -152,10 +152,11 @@ REST_FRAMEWORK = {
 }
 
 # CORS configuration
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://localhost:8080', cast=Csv())
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:8080',
+]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_HEADERS = [
