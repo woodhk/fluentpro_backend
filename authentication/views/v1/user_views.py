@@ -39,7 +39,7 @@ class UserProfileView(CachedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
-                    status=status.HTTP_404_NOT_FOUND
+                    status_code=status.HTTP_404_NOT_FOUND
                 )
             
             # Format response data
@@ -72,7 +72,7 @@ class UserProfileView(CachedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get user profile",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     def patch(self, request):
@@ -122,7 +122,7 @@ class UserProfileView(CachedView, VersionedView):
             return APIResponse.error(
                 message="Failed to update user profile",
                 details=str(e),
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
 
 
@@ -159,7 +159,7 @@ class UserSettingsView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get user settings",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     def patch(self, request):
@@ -177,7 +177,7 @@ class UserSettingsView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to update user settings",
                 details=str(e),
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
 
 
@@ -209,5 +209,5 @@ class UserDeactivateView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to deactivate account",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

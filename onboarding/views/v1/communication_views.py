@@ -56,7 +56,7 @@ class GetCommunicationPartnersView(CachedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get communication partners",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -111,7 +111,7 @@ class SelectCommunicationPartnersView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to select communication partners",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -151,7 +151,7 @@ class GetUserCommunicationPartnersView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get user communication partners",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -206,7 +206,7 @@ class GetUnitsForPartnerView(CachedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get units for partner",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -235,7 +235,7 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
             if not any(p.partner and p.partner.id == partner_id for p in user_partners):
                 return APIResponse.error(
                     message="Partner not found in user's selected partners",
-                    status=status.HTTP_404_NOT_FOUND
+                    status_code=status.HTTP_404_NOT_FOUND
                 )
             
             # Save unit selections
@@ -278,7 +278,7 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to select units for partner",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -306,7 +306,7 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
             if not partner_selection:
                 return APIResponse.error(
                     message="Partner not found in user's selected partners",
-                    status=status.HTTP_404_NOT_FOUND
+                    status_code=status.HTTP_404_NOT_FOUND
                 )
             
             # Get user's unit selections for this partner
@@ -340,5 +340,5 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get user units for partner",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

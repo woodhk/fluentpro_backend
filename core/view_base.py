@@ -30,6 +30,13 @@ class BaseFluentProView(APIView, ServiceMixin):
     Provides common functionality and standardized error handling.
     """
     
+    def __init__(self, *args, **kwargs):
+        """Initialize view with proper service mixin setup."""
+        super().__init__(*args, **kwargs)
+        # Ensure ServiceMixin is properly initialized
+        if not hasattr(self, '_services'):
+            ServiceMixin.__init__(self)
+    
     def dispatch(self, request, *args, **kwargs):
         """Override dispatch to add common request processing."""
         try:
@@ -38,32 +45,32 @@ class BaseFluentProView(APIView, ServiceMixin):
             return APIResponse.error(
                 message="User not found",
                 details=str(e),
-                status=status.HTTP_404_NOT_FOUND
+                status_code=status.HTTP_404_NOT_FOUND
             )
         except AuthenticationError as e:
             return APIResponse.error(
                 message="Authentication failed",
                 details=str(e),
-                status=status.HTTP_401_UNAUTHORIZED
+                status_code=status.HTTP_401_UNAUTHORIZED
             )
         except ValidationError as e:
             return APIResponse.error(
                 message="Validation failed",
                 details=str(e),
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
         except BusinessLogicError as e:
             return APIResponse.error(
                 message="Business logic error",
                 details=str(e),
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
             logger.error(f"Unexpected error in {self.__class__.__name__}: {str(e)}")
             return APIResponse.error(
                 message="Internal server error",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 

@@ -59,7 +59,7 @@ class SetNativeLanguageView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to update native language",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -100,5 +100,5 @@ class GetAvailableLanguagesView(CachedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get available languages",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

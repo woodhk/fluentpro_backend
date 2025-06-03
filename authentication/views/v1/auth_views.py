@@ -36,7 +36,7 @@ class SignUpView(PublicView, VersionedView):
             return APIResponse.error(
                 message="Validation failed",
                 details=serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
@@ -85,7 +85,7 @@ class SignUpView(PublicView, VersionedView):
                         'date_of_birth': str(internal_user.date_of_birth)
                     }
                 },
-                status=status.HTTP_201_CREATED
+                status_code=status.HTTP_201_CREATED
             )
             
         except (ValidationError, ConflictError, AuthenticationError):
@@ -95,7 +95,7 @@ class SignUpView(PublicView, VersionedView):
             return APIResponse.error(
                 message="Sign up failed",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -114,7 +114,7 @@ class LoginView(PublicView, VersionedView):
             return APIResponse.error(
                 message="Validation failed",
                 details=serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
@@ -133,7 +133,7 @@ class LoginView(PublicView, VersionedView):
                 return APIResponse.error(
                     message="User not found",
                     details="User does not exist in our system",
-                    status=status.HTTP_404_NOT_FOUND
+                    status_code=status.HTTP_404_NOT_FOUND
                 )
             
             return APIResponse.success(
@@ -156,7 +156,7 @@ class LoginView(PublicView, VersionedView):
                 return APIResponse.error(
                     message="Invalid credentials",
                     details="Email or password is incorrect",
-                    status=status.HTTP_401_UNAUTHORIZED
+                    status_code=status.HTTP_401_UNAUTHORIZED
                 )
             raise
         except Exception as e:
@@ -164,7 +164,7 @@ class LoginView(PublicView, VersionedView):
             return APIResponse.error(
                 message="Login failed",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -183,7 +183,7 @@ class RefreshTokenView(PublicView, VersionedView):
             return APIResponse.error(
                 message="Validation failed",
                 details=serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
@@ -207,7 +207,7 @@ class RefreshTokenView(PublicView, VersionedView):
             return APIResponse.error(
                 message="Token refresh failed",
                 details=str(e),
-                status=status.HTTP_401_UNAUTHORIZED
+                status_code=status.HTTP_401_UNAUTHORIZED
             )
 
 
@@ -226,7 +226,7 @@ class LogoutView(CSRFExemptView, VersionedView):
             return APIResponse.error(
                 message="Validation failed",
                 details=serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
@@ -244,7 +244,7 @@ class LogoutView(CSRFExemptView, VersionedView):
                 return APIResponse.error(
                     message="Logout failed",
                     details="Failed to revoke token",
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
             
         except Exception as e:
@@ -252,7 +252,7 @@ class LogoutView(CSRFExemptView, VersionedView):
             return APIResponse.error(
                 message="Logout failed",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -271,7 +271,7 @@ class Auth0CallbackView(PublicView, VersionedView):
             return APIResponse.error(
                 message="Validation failed",
                 details=serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
+                status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
@@ -286,5 +286,5 @@ class Auth0CallbackView(PublicView, VersionedView):
             return APIResponse.error(
                 message="Callback processing failed",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

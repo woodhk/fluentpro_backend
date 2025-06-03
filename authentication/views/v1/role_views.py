@@ -41,7 +41,7 @@ class JobInputView(AuthenticatedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
-                    status=status.HTTP_404_NOT_FOUND
+                    status_code=status.HTTP_404_NOT_FOUND
                 )
             
             if not user_profile.industry_name:
@@ -96,7 +96,7 @@ class JobInputView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Job input processing failed",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -157,7 +157,7 @@ class RoleSelectionView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Role selection failed",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -193,7 +193,7 @@ class NewRoleCreationView(AuthenticatedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
-                    status=status.HTTP_404_NOT_FOUND
+                    status_code=status.HTTP_404_NOT_FOUND
                 )
             
             if not user_profile.industry_id:
@@ -246,7 +246,7 @@ class NewRoleCreationView(AuthenticatedView, VersionedView):
                         'onboarding_status': updated_profile.onboarding_status.value
                     }
                 },
-                status=status.HTTP_201_CREATED
+                status_code=status.HTTP_201_CREATED
             )
             
         except (ValidationError, BusinessLogicError):
@@ -256,7 +256,7 @@ class NewRoleCreationView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="New role creation failed",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -322,5 +322,5 @@ class RoleSearchView(CachedView, VersionedView):
             return APIResponse.error(
                 message="Role search failed",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

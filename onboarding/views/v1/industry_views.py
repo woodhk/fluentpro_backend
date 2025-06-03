@@ -50,7 +50,7 @@ class SetIndustryView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to update industry",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -87,5 +87,5 @@ class GetAvailableIndustriesView(CachedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get available industries",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

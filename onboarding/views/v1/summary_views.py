@@ -40,7 +40,7 @@ class GetOnboardingSummaryView(CachedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
-                    status=status.HTTP_404_NOT_FOUND
+                    status_code=status.HTTP_404_NOT_FOUND
                 )
             
             # Get communication selections
@@ -143,7 +143,7 @@ class GetOnboardingSummaryView(CachedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get onboarding summary",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -165,7 +165,7 @@ class OnboardingProgressView(AuthenticatedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
-                    status=status.HTTP_404_NOT_FOUND
+                    status_code=status.HTTP_404_NOT_FOUND
                 )
             
             # Determine current step and progress
@@ -226,5 +226,5 @@ class OnboardingProgressView(AuthenticatedView, VersionedView):
             return APIResponse.error(
                 message="Failed to get onboarding progress",
                 details=str(e),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
