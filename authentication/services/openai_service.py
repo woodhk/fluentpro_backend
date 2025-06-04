@@ -244,28 +244,28 @@ Keywords:"""
 
             job_title = context.get('job_title', 'Role') if context else 'Role'
             
-            prompt = f"""IMPORTANT: Rewrite this job description from first-person ("I do...") to third-person ("This role involves...").
+            prompt = f"""CRITICAL: Convert this first-person job description to third-person. Return ONLY the rewritten description text with NO formatting, NO headers, NO markdown, NO title repetition.
 
-Job Title: {job_title}
+Original Description: {original_description}
 
-Original Description (first-person):
-{original_description}
+RULES:
+1. Change "I analyze" → "Analyzes"
+2. Change "I work with" → "Works with" 
+3. Change "I manage" → "Manages"
+4. Change "I create" → "Creates"
+5. Change "I develop" → "Develops"
+6. Keep all technical details exactly as they are
+7. DO NOT add any markdown formatting (**bold**, headers, etc.)
+8. DO NOT repeat the job title
+9. DO NOT add "Job Title:" or "Description:" labels
+10. Return ONLY the plain description text
 
-INSTRUCTIONS:
-- Change ALL "I" statements to third-person
-- Change "I analyze" to "Analyzes" or "This role involves analyzing"
-- Change "I work with" to "Works with" or "Utilizes" 
-- Change "I manage" to "Manages" or "Responsible for managing"
-- Change "I create" to "Creates" or "Develops"
-- Keep all technical details and responsibilities
-- Make it sound professional for a job database
-
-Rewritten Description (third-person):"""
+Third-person description:"""
 
             response = self.client.chat.completions.create(
                 model=self.chat_model,
                 messages=[
-                    {"role": "system", "content": "You are an expert HR writer. You MUST convert first-person job descriptions to third-person format. Change every 'I do X' to 'Does X' or 'Responsible for X'."},
+                    {"role": "system", "content": "You are an expert HR writer. Convert first-person job descriptions to third-person format. Return ONLY the plain text description with NO markdown, NO formatting, NO headers, NO job title repetition. Just the converted description text."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=500,
@@ -274,8 +274,9 @@ Rewritten Description (third-person):"""
             
             if response and response.choices and len(response.choices) > 0:
                 rewritten_description = response.choices[0].message.content.strip()
-                # Remove any quotation marks that might be added by the LLM
-                rewritten_description = rewritten_description.strip('"').strip("'")
+                
+                # Clean up any formatting that might have been added
+                rewritten_description = self._clean_description_formatting(rewritten_description)
                 
                 # Fallback: if LLM didn't change anything, do basic find/replace
                 if rewritten_description == original_description:
@@ -402,6 +403,44 @@ Provide response in JSON format as an array of objects with keys: title, descrip
         Kept for backward compatibility.
         """
         return self.rewrite_role_description(job_description, {'job_title': job_title})
+    
+    def _clean_description_formatting(self, description: str) -> str:
+        """
+        Clean unwanted formatting from LLM-generated descriptions
+        """
+        import re
+        
+        # Remove quotation marks
+        description = description.strip('"').strip("'")
+        
+        # Remove markdown bold formatting
+        description = re.sub(r'\*\*(.*?)\*\*', r'\1', description)
+        
+        # Remove markdown headers
+        description = re.sub(r'^#+\s*', '', description, flags=re.MULTILINE)
+        
+        # Remove job title repetition patterns
+        description = re.sub(r'^Job Title:\s*.*?\n', '', description, flags=re.MULTILINE)
+        description = re.sub(r'^Description:\s*', '', description, flags=re.MULTILINE)
+        description = re.sub(r'^\*\*Job Title:.*?\*\*\s*\n', '', description, flags=re.MULTILINE)
+        description = re.sub(r'^\*\*Description:\*\*\s*\n', '', description, flags=re.MULTILINE)
+        
+        # Remove any lines that are just the job title repeated
+        lines = description.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            line = line.strip()
+            # Skip empty lines and lines that are just formatting
+            if line and not re.match(r'^\*+$', line) and not re.match(r'^-+$', line):
+                cleaned_lines.append(line)
+        
+        # Join lines back together
+        result = '\n'.join(cleaned_lines).strip()
+        
+        # Replace multiple newlines with single newlines
+        result = re.sub(r'\n\s*\n', '\n', result)
+        
+        return result
     
     def _basic_first_to_third_person(self, description: str) -> str:
         """
