@@ -35,11 +35,15 @@ class GetCommunicationPartnersView(CachedView, VersionedView):
             communication_manager = CommunicationManager()
             partners = communication_manager.get_available_partners()
             
+            # Create reverse mapping for slugs
+            name_to_slug = {v: k for k, v in communication_manager.PARTNER_SLUG_TO_NAME.items()}
+            
             # Format response
             formatted_partners = []
             for partner in partners:
                 formatted_partners.append({
                     'id': partner.id,
+                    'slug': name_to_slug.get(partner.name, partner.name.lower().replace(' ', '-')),
                     'name': partner.name,
                     'description': partner.description
                 })

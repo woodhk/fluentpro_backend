@@ -33,6 +33,57 @@ class CommunicationManager:
     
     def __init__(self, supabase_service: Optional[SupabaseService] = None):
         self.supabase_service = supabase_service or SupabaseService()
+        
+        # Mapping from frontend slug identifiers to partner names
+        self.PARTNER_SLUG_TO_NAME = {
+            'senior-management': 'Senior Management',
+            'customers': 'Customers', 
+            'clients': 'Clients',
+            'colleagues': 'Colleagues',
+            'suppliers': 'Suppliers',
+            'partners': 'Partners',
+            'stakeholders': 'Stakeholders'
+        }
+    
+    def _resolve_partner_ids(self, partner_ids: List[str]) -> List[str]:
+        """
+        Resolve partner identifiers to actual UUIDs.
+        Handles both direct UUIDs and slug-based identifiers.
+        
+        Args:
+            partner_ids: List of partner IDs (can be UUIDs or slugs)
+            
+        Returns:
+            List of resolved UUID strings
+            
+        Raises:
+            ValidationError: If any partner ID cannot be resolved
+        """
+        resolved_ids = []
+        
+        for partner_id in partner_ids:
+            # Check if it's already a UUID (36 chars, contains hyphens)
+            if len(partner_id) == 36 and '-' in partner_id:
+                resolved_ids.append(partner_id)
+            else:
+                # Try to resolve slug to name, then name to UUID
+                partner_name = self.PARTNER_SLUG_TO_NAME.get(partner_id)
+                if not partner_name:
+                    raise ValidationError(f"Unknown partner identifier: '{partner_id}'. Valid options: {list(self.PARTNER_SLUG_TO_NAME.keys())}")
+                
+                # Query database for the UUID by name
+                partner_response = self.supabase_service.client.table('communication_partners')\
+                    .select('id')\
+                    .eq('name', partner_name)\
+                    .eq('is_active', True)\
+                    .execute()
+                
+                if not partner_response.data:
+                    raise ValidationError(f"Partner '{partner_name}' not found in database")
+                
+                resolved_ids.append(partner_response.data[0]['id'])
+        
+        return resolved_ids
     
     def get_available_communication_partners(self) -> List[CommunicationPartner]:
         """
@@ -125,8 +176,11 @@ class CommunicationManager:
             if not user_response.data:
                 raise SupabaseUserNotFoundError(user_id)
             
-            # Validate partner IDs exist
+            # Resolve partner IDs (handles both UUIDs and slugs)
             if partner_ids:
+                partner_ids = self._resolve_partner_ids(partner_ids)
+                
+                # Validate resolved partner IDs exist
                 partners_response = self.supabase_service.client.table('communication_partners')\
                     .select('id, name')\
                     .in_('id', partner_ids)\
