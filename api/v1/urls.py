@@ -10,7 +10,7 @@ from authentication.views.v1 import (
     SignUpView, LoginView, RefreshTokenView, LogoutView, Auth0CallbackView,
     UserProfileView, JobInputView, RoleSelectionView, NewRoleCreationView
 )
-from test_endpoint import HealthCheckView
+from authentication.health import HealthCheckView
 from onboarding.views.v1 import (
     SetNativeLanguageView, GetAvailableLanguagesView,
     SetIndustryView, GetAvailableIndustriesView,
