@@ -56,15 +56,16 @@ def test_job_input_endpoint():
         # Mock authentication 
         class MockUser:
             def __init__(self):
-                self.id = 'test-user-id'
+                self.sub = 'auth0|683bd7b87653872d9ac747e1'  # Auth0 user ID
                 self.email = 'test@example.com'
                 self.is_authenticated = True
         
         request.user = MockUser()
         
-        # Mock the Auth0 user ID method
+        # Create DRF view properly
         view = JobInputView()
-        view.get_auth0_user_id = Mock(return_value='auth0|683bd7b87653872d9ac747e1')  # Use a real Auth0 ID from your database
+        view.request = request
+        view.format_kwarg = None
         
         print(f"\n🔐 Using Auth0 ID: auth0|683bd7b87653872d9ac747e1")
         
@@ -134,7 +135,8 @@ def test_job_input_endpoint():
         
         # Call the view again
         hotel_view = JobInputView()
-        hotel_view.get_auth0_user_id = Mock(return_value='auth0|683bd7b87653872d9ac747e1')
+        hotel_view.request = hotel_request
+        hotel_view.format_kwarg = None
         
         print(f"\n🚀 Calling JobInputView endpoint for hotel manager...")
         hotel_response = hotel_view.post(hotel_request)

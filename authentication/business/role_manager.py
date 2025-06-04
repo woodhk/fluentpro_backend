@@ -30,6 +30,9 @@ class RoleManager:
     Handles role matching, creation, and industry management.
     """
     
+    # Configuration constants
+    MIN_RELEVANCY_SCORE = 0.7  # 70% minimum relevancy score - easy to change
+    
     def __init__(
         self,
         supabase_service: Optional[SupabaseService] = None,
@@ -89,10 +92,16 @@ class RoleManager:
             if not search_result.get('success'):
                 raise AzureSearchError(search_result.get('error', 'Unknown search error'))
             
-            # Convert search results to RoleMatch instances
+            # Convert search results to RoleMatch instances and filter by relevancy
             role_matches = []
             for result in search_result.get('results', []):
                 try:
+                    # Skip results below minimum relevancy threshold
+                    relevance_score = result['score']
+                    if relevance_score < self.MIN_RELEVANCY_SCORE:
+                        logger.debug(f"Skipping role '{result['title']}' with low relevancy score: {relevance_score:.3f}")
+                        continue
+                    
                     # Create Role instance from search result
                     role_data = {
                         'id': result['id'],
@@ -107,18 +116,28 @@ class RoleManager:
                     
                     role = Role.from_supabase_data(role_data)
                     
-                    # Create match reasons based on search results
+                    # Create match reasons based on improved search results
                     match_reasons = []
                     if result.get('semantic_caption'):
                         match_reasons.append("Semantic content match")
-                    if result['score'] > 0.8:
-                        match_reasons.append("High text similarity")
-                    elif result['score'] > 0.6:
-                        match_reasons.append("Good text similarity")
+                    if relevance_score > 0.9:
+                        match_reasons.append("Excellent match")
+                    elif relevance_score > 0.8:
+                        match_reasons.append("High relevancy match")
+                    elif relevance_score > 0.7:
+                        match_reasons.append("Good relevancy match")
+                    else:
+                        match_reasons.append("Acceptable match")
+                    
+                    # Add specific match reasons based on query content
+                    title_lower = result['title'].lower()
+                    query_text = f"{job_description.title} {job_description.description}".lower()
+                    if any(word in title_lower for word in job_description.title.lower().split()):
+                        match_reasons.append("Title keyword match")
                     
                     role_match = RoleMatch(
                         role=role,
-                        relevance_score=result['score'],
+                        relevance_score=relevance_score,
                         match_reasons=match_reasons
                     )
                     
@@ -130,6 +149,8 @@ class RoleManager:
             
             # Sort by relevance score (highest first)
             role_matches.sort(key=lambda x: x.relevance_score, reverse=True)
+            
+            logger.info(f"Found {len(role_matches)} roles above {self.MIN_RELEVANCY_SCORE:.0%} relevancy threshold")
             
             return role_matches
             

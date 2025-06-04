@@ -81,16 +81,16 @@ class AzureSearchService:
                           filterable=True, sortable=True)
             ]
             
-            # Configure vector search
+            # Configure vector search with optimized parameters for better relevancy
             vector_search = VectorSearch(
                 algorithms=[
                     HnswAlgorithmConfiguration(
                         name="role-hnsw-algorithm",
                         kind=VectorSearchAlgorithmKind.HNSW,
                         parameters={
-                            "m": 4,
-                            "efConstruction": 400,
-                            "efSearch": 500,
+                            "m": 10,  # Maximum allowed value for better recall
+                            "efConstruction": 800,  # Higher for better index quality
+                            "efSearch": 1000,  # Higher for better search quality
                             "metric": "cosine"
                         }
                     )
@@ -288,29 +288,72 @@ class AzureSearchService:
                            top_k: int = 5,
                            filters: Optional[str] = None) -> Dict[str, Any]:
         """
-        Perform hybrid search combining text and vector search
+        Perform hybrid search combining text and vector search with improved scoring
         """
         try:
-            # Create vector query
+            # Create vector query with weight for better hybrid search balance
             vector_query = VectorizedQuery(
                 vector=query_embedding,
-                k_nearest_neighbors=top_k,
-                fields="embedding_vector"
+                k_nearest_neighbors=top_k * 3,  # Get more candidates for better ranking
+                fields="embedding_vector",
+                weight=0.6  # Give vector search more weight for semantic matching
             )
             
-            # Perform hybrid search
+            # Perform hybrid search with semantic ranking
             search_results = self.search_client.search(
                 search_text=text_query,
                 vector_queries=[vector_query],
                 filter=filters,
                 select=["id", "title", "description", "industry_name", "hierarchy_level", "search_keywords"],
                 top=top_k,
-                semantic_configuration_name="role-semantic-config"
+                query_type="semantic",
+                semantic_configuration_name="role-semantic-config",
+                query_caption="extractive",
+                query_answer="extractive"
             )
             
-            # Process results
+            # Process results with improved scoring
             results = []
             for result in search_results:
+                # Get the actual search score and normalize it
+                raw_score = result.get('@search.score', 0)
+                
+                # Improved scoring algorithm
+                # Azure Search semantic scores typically range from 0.01 to 0.1+ for good matches
+                # We need to transform this to a more useful 0-1 scale
+                
+                title_lower = result['title'].lower()
+                query_lower = text_query.lower()
+                
+                # Base score transformation - use a more aggressive scaling
+                # Map 0.025 -> 0.7, 0.03 -> 0.8, 0.04+ -> 0.9+
+                import math
+                if raw_score <= 0.01:
+                    base_score = raw_score * 10  # Very low scores stay low
+                elif raw_score <= 0.025:
+                    base_score = 0.5 + (raw_score - 0.01) * 13.33  # Map 0.01-0.025 to 0.5-0.7
+                elif raw_score <= 0.035:
+                    base_score = 0.7 + (raw_score - 0.025) * 20  # Map 0.025-0.035 to 0.7-0.9
+                else:
+                    base_score = 0.9 + min((raw_score - 0.035) * 10, 0.1)  # 0.035+ maps to 0.9-1.0
+                
+                relevance_score = min(base_score, 1.0)
+                
+                # Boost for exact title matches
+                query_words = set(query_lower.split())
+                title_words = set(title_lower.split())
+                
+                # Check for exact title match
+                if title_lower.strip() in query_lower or any(title_lower.startswith(word) for word in query_words if len(word) > 3):
+                    relevance_score = min(relevance_score * 1.4, 1.0)
+                
+                # Boost for significant word overlap
+                word_overlap = len(query_words.intersection(title_words))
+                if word_overlap >= 2:
+                    relevance_score = min(relevance_score * 1.2, 1.0)
+                elif word_overlap >= 1:
+                    relevance_score = min(relevance_score * 1.1, 1.0)
+                
                 results.append({
                     'id': result['id'],
                     'title': result['title'],
@@ -318,9 +361,13 @@ class AzureSearchService:
                     'industry_name': result['industry_name'],
                     'hierarchy_level': result['hierarchy_level'],
                     'search_keywords': result.get('search_keywords', []),
-                    'score': result['@search.score'],
+                    'score': relevance_score,  # Use improved relevance score
+                    'raw_score': raw_score,  # Keep original for debugging
                     'semantic_caption': result.get('@search.captions', [])
                 })
+            
+            # Sort by improved relevance score
+            results.sort(key=lambda x: x['score'], reverse=True)
             
             return {
                 'success': True,
