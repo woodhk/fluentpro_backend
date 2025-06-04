@@ -94,8 +94,8 @@ class SelectCommunicationPartnersView(AuthenticatedView, VersionedView):
             stored_partners = []
             for selection in selections:
                 stored_partners.append({
-                    'id': selection.partner.id if selection.partner else None,
-                    'name': selection.partner.name if selection.partner else selection.custom_partner_name,
+                    'id': selection.communication_partner_id if not selection.is_custom else None,
+                    'name': selection.display_name,
                     'priority': selection.priority,
                     'is_custom': selection.is_custom
                 })
@@ -139,9 +139,9 @@ class GetUserCommunicationPartnersView(AuthenticatedView, VersionedView):
             partners = []
             for selection in selections:
                 partners.append({
-                    'id': selection.partner.id if selection.partner else None,
-                    'name': selection.partner.name if selection.partner else selection.custom_partner_name,
-                    'description': selection.partner.description if selection.partner else 'Custom partner',
+                    'id': selection.communication_partner_id if not selection.is_custom else None,
+                    'name': selection.display_name,
+                    'description': selection.custom_partner_description if selection.is_custom else 'Standard communication partner',
                     'priority': selection.priority,
                     'is_custom': selection.is_custom
                 })
@@ -236,7 +236,7 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
             communication_manager = CommunicationManager()
             user_partners = communication_manager.get_user_partners(user.id)
             
-            if not any(p.partner and p.partner.id == partner_id for p in user_partners):
+            if not any(p.communication_partner_id == partner_id for p in user_partners):
                 return APIResponse.error(
                     message="Partner not found in user's selected partners",
                     status_code=status.HTTP_404_NOT_FOUND
@@ -254,8 +254,8 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
             stored_units = []
             for selection in selections:
                 stored_units.append({
-                    'id': selection.unit.id if selection.unit else None,
-                    'name': selection.unit.name if selection.unit else selection.custom_unit_name,
+                    'id': selection.unit_id if not selection.is_custom else None,
+                    'name': selection.display_name,
                     'priority': selection.priority,
                     'is_custom': selection.is_custom
                 })
@@ -303,7 +303,7 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
             user_partners = communication_manager.get_user_partners(user.id)
             
             partner_selection = next(
-                (p for p in user_partners if p.partner and p.partner.id == partner_id), 
+                (p for p in user_partners if p.communication_partner_id == partner_id), 
                 None
             )
             
@@ -320,9 +320,9 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
             units = []
             for selection in unit_selections:
                 units.append({
-                    'id': selection.unit.id if selection.unit else None,
-                    'name': selection.unit.name if selection.unit else selection.custom_unit_name,
-                    'description': selection.unit.description if selection.unit else selection.custom_unit_description,
+                    'id': selection.unit_id if not selection.is_custom else None,
+                    'name': selection.display_name,
+                    'description': selection.custom_unit_description if selection.is_custom else 'Standard communication unit',
                     'priority': selection.priority,
                     'is_custom': selection.is_custom
                 })
@@ -330,9 +330,9 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
             return APIResponse.success(
                 data={
                     'partner': {
-                        'id': partner_selection.partner.id,
-                        'name': partner_selection.partner.name,
-                        'description': partner_selection.partner.description
+                        'id': partner_selection.communication_partner_id,
+                        'name': partner_selection.display_name,
+                        'description': partner_selection.custom_partner_description if partner_selection.is_custom else 'Standard communication partner'
                     },
                     'selected_units': units,
                     'total_selected': len(units)
