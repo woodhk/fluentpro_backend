@@ -44,6 +44,25 @@ class CommunicationManager:
             'partners': 'Partners',
             'stakeholders': 'Stakeholders'
         }
+        
+        # Mapping from frontend slug identifiers to unit names
+        self.UNIT_SLUG_TO_NAME = {
+            'meetings': 'Meetings',
+            'presentations': 'Presentations',
+            'negotiations': 'Negotiations',
+            'interviews': 'Interviews',
+            'phone-calls': 'Phone Calls',
+            'video-conferences': 'Video Conferences',
+            'client-conversations': 'Client Conversations',
+            'team-discussions': 'Team Discussions',
+            'one-on-ones': 'One-on-Ones',
+            'briefings': 'Briefings',
+            'feedback-sessions': 'Feedback Sessions',
+            'training-sessions': 'Training Sessions',
+            'informal-chats': 'Informal Chats',
+            'status-updates': 'Status Updates',
+            'conflict-resolution': 'Conflict Resolution'
+        }
     
     def _resolve_partner_ids(self, partner_ids: List[str]) -> List[str]:
         """
@@ -82,6 +101,46 @@ class CommunicationManager:
                     raise ValidationError(f"Partner '{partner_name}' not found in database")
                 
                 resolved_ids.append(partner_response.data[0]['id'])
+        
+        return resolved_ids
+    
+    def _resolve_unit_ids(self, unit_ids: List[str]) -> List[str]:
+        """
+        Resolve unit identifiers to actual UUIDs.
+        Handles both direct UUIDs and slug-based identifiers.
+        
+        Args:
+            unit_ids: List of unit IDs (can be UUIDs or slugs)
+            
+        Returns:
+            List of resolved UUID strings
+            
+        Raises:
+            ValidationError: If any unit ID cannot be resolved
+        """
+        resolved_ids = []
+        
+        for unit_id in unit_ids:
+            # Check if it's already a UUID (36 chars, contains hyphens)
+            if len(unit_id) == 36 and '-' in unit_id:
+                resolved_ids.append(unit_id)
+            else:
+                # Try to resolve slug to name, then name to UUID
+                unit_name = self.UNIT_SLUG_TO_NAME.get(unit_id)
+                if not unit_name:
+                    raise ValidationError(f"Unknown unit identifier: '{unit_id}'. Valid options: {list(self.UNIT_SLUG_TO_NAME.keys())}")
+                
+                # Query database for the UUID by name
+                unit_response = self.supabase_service.client.table('units')\
+                    .select('id')\
+                    .eq('name', unit_name)\
+                    .eq('is_active', True)\
+                    .execute()
+                
+                if not unit_response.data:
+                    raise ValidationError(f"Unit '{unit_name}' not found in database")
+                
+                resolved_ids.append(unit_response.data[0]['id'])
         
         return resolved_ids
     
@@ -296,8 +355,11 @@ class CommunicationManager:
             if not partner_check.data:
                 raise ResourceNotFoundError("Communication Partner", partner_id)
             
-            # Validate unit IDs exist
+            # Resolve unit IDs (handles both UUIDs and slugs)
             if unit_ids:
+                unit_ids = self._resolve_unit_ids(unit_ids)
+                
+                # Validate resolved unit IDs exist
                 units_response = self.supabase_service.client.table('units')\
                     .select('id, name')\
                     .in_('id', unit_ids)\

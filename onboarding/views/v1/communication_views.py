@@ -169,6 +169,13 @@ class GetUnitsForPartnerView(CachedView, VersionedView):
     def get(self, request, partner_id):
         """Get available units for a communication partner."""
         try:
+            # Resolve partner_id (handle both UUIDs and slugs)
+            communication_manager = CommunicationManager()
+            if len(partner_id) != 36 or '-' not in partner_id:
+                # It's a slug, resolve to UUID
+                resolved_partner_ids = communication_manager._resolve_partner_ids([partner_id])
+                partner_id = resolved_partner_ids[0]
+                
             # Check cache first
             cache_key = self.get_cache_key("units", partner_id)
             cached_units = self.get_cached_response(cache_key)
@@ -177,7 +184,6 @@ class GetUnitsForPartnerView(CachedView, VersionedView):
                 return APIResponse.success(data=cached_units)
             
             # Get units using communication manager
-            communication_manager = CommunicationManager()
             units = communication_manager.get_available_units()
             
             # Get partner name for context
@@ -185,11 +191,15 @@ class GetUnitsForPartnerView(CachedView, VersionedView):
             partner = next((p for p in partners if p.id == partner_id), None)
             partner_name = partner.name if partner else "Unknown Partner"
             
+            # Create reverse mapping for unit slugs
+            unit_name_to_slug = {v: k for k, v in communication_manager.UNIT_SLUG_TO_NAME.items()}
+            
             # Format response
             formatted_units = []
             for unit in units:
                 formatted_units.append({
                     'id': unit.id,
+                    'slug': unit_name_to_slug.get(unit.name, unit.name.lower().replace(' ', '-')),
                     'name': unit.name,
                     'description': unit.description
                 })
@@ -223,8 +233,23 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
     def post(self, request, partner_id):
         """Select units for a communication partner."""
         try:
+            # Handle different request formats
+            unit_selections = request.data.get('unit_selections', [])
             unit_ids = request.data.get('unit_ids', [])
             other_units = request.data.get('other_units', [])
+            
+            # If frontend sends unit_selections format, extract unit_ids
+            if unit_selections and not unit_ids:
+                unit_ids = [selection.get('unit_id') for selection in unit_selections if selection.get('unit_id')]
+                # Filter out None values
+                unit_ids = [uid for uid in unit_ids if uid is not None]
+            
+            # Resolve partner_id (handle both UUIDs and slugs)
+            communication_manager = CommunicationManager()
+            if len(partner_id) != 36 or '-' not in partner_id:
+                # It's a slug, resolve to UUID
+                resolved_partner_ids = communication_manager._resolve_partner_ids([partner_id])
+                partner_id = resolved_partner_ids[0]
             
             if not unit_ids and not other_units:
                 raise ValidationError("At least one unit must be selected")
@@ -232,8 +257,7 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
             # Get current user
             user = self.get_current_user()
             
-            # Validate partner belongs to user
-            communication_manager = CommunicationManager()
+            # Validate partner belongs to user (now using resolved partner_id)
             user_partners = communication_manager.get_user_partners(user.id)
             
             if not any(p.communication_partner_id == partner_id for p in user_partners):
@@ -295,11 +319,17 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
     def get(self, request, partner_id):
         """Get user's selected units for a communication partner."""
         try:
+            # Resolve partner_id (handle both UUIDs and slugs)
+            communication_manager = CommunicationManager()
+            if len(partner_id) != 36 or '-' not in partner_id:
+                # It's a slug, resolve to UUID
+                resolved_partner_ids = communication_manager._resolve_partner_ids([partner_id])
+                partner_id = resolved_partner_ids[0]
+            
             # Get current user
             user = self.get_current_user()
             
             # Validate partner belongs to user
-            communication_manager = CommunicationManager()
             user_partners = communication_manager.get_user_partners(user.id)
             
             partner_selection = next(
