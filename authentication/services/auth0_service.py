@@ -3,6 +3,7 @@ from django.conf import settings
 from typing import Dict, Any, Optional
 import json
 import logging
+import time
 
 from core.interfaces import AuthServiceInterface
 from core.exceptions import AuthenticationError, ValidationError
@@ -22,14 +23,21 @@ class Auth0Service(AuthServiceInterface):
         self.client_secret = settings.AUTH0_CLIENT_SECRET
         self.audience = settings.AUTH0_AUDIENCE
         self._management_token = None
+        self._token_expires_at = None
     
     def get_management_token(self) -> str:
         """
-        Get Auth0 Management API access token
+        Get Auth0 Management API access token with expiry checking
         """
-        if self._management_token:
+        current_time = time.time()
+        
+        # Check if we have a valid token that hasn't expired
+        if (self._management_token and 
+            self._token_expires_at and 
+            current_time < self._token_expires_at):
             return self._management_token
             
+        # Request new token
         url = f'https://{self.domain}/oauth/token'
         payload = {
             'grant_type': 'client_credentials',
@@ -40,7 +48,12 @@ class Auth0Service(AuthServiceInterface):
         
         response = requests.post(url, json=payload)
         if response.status_code == 200:
-            self._management_token = response.json()['access_token']
+            token_data = response.json()
+            self._management_token = token_data['access_token']
+            # Set expiry time with 5-minute buffer to avoid edge cases
+            expires_in = token_data.get('expires_in', 86400)  # Default 24 hours
+            self._token_expires_at = current_time + expires_in - 300  # 5-minute buffer
+            logger.info(f"Refreshed Auth0 management token, expires in {expires_in} seconds")
             return self._management_token
         else:
             raise Exception(f'Failed to get management token: {response.text}')
