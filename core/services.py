@@ -1,13 +1,21 @@
 """
-Service registry for dependency management and service instantiation.
-Implements singleton pattern and dependency injection for services.
+DEPRECATED: Legacy Service Registry - Use application.container instead
+
+This module provides backward compatibility for the old ServiceRegistry pattern.
+New code should use the DI container from application.container.
+
+MIGRATION GUIDE:
+- Replace ServiceRegistry.get_service() with container.resolve()
+- Replace ServiceMixin with @inject decorator
+- Use dependency injection in constructors instead of property access
 """
 
+import warnings
 from typing import Dict, Any, Optional, Type, TypeVar
-from abc import ABC, abstractmethod
 import logging
-from threading import Lock
 
+# Import the new DI container
+from application.container import get_container, DependencyResolutionError
 from core.interfaces import (
     UserRepositoryInterface,
     RoleRepositoryInterface,
@@ -26,302 +34,447 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
+# Issue deprecation warning when this module is imported
+warnings.warn(
+    "ServiceRegistry is deprecated. Use application.container.get_container() instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
 
 class ServiceRegistry:
     """
-    Central service registry implementing dependency injection.
-    Manages service instances and their dependencies.
+    DEPRECATED: Legacy service registry - use application.container instead.
+    
+    This class now delegates to the new DI container for backward compatibility.
     """
     
-    _instances: Dict[str, Any] = {}
-    _lock = Lock()
-    
-    # Service configuration - maps interfaces to implementations
-    _service_config: Dict[str, str] = {
-        'user_repository': 'shared.repositories.user_repository.UserRepository',
-        'role_repository': 'shared.repositories.role_repository.RoleRepository',
-        'industry_repository': 'shared.repositories.industry_repository.IndustryRepository',
-        'communication_repository': 'shared.repositories.communication_repository.CommunicationRepository',
-        'auth_service': 'authentication.services.auth0_service.Auth0Service',
-        'embedding_service': 'authentication.services.azure_openai_service.AzureOpenAIService',
-        'search_service': 'authentication.services.azure_search_service.AzureSearchService',
-        'database_service': 'authentication.services.supabase_service.SupabaseService',
-        'unit_of_work': 'core.unit_of_work.SupabaseUnitOfWork',
-        'cache_service': 'core.cache.CacheService'
+    # Mapping of old service names to new interface types
+    _service_type_mapping = {
+        'user_repository': UserRepositoryInterface,
+        'role_repository': RoleRepositoryInterface,
+        'industry_repository': IndustryRepositoryInterface,
+        'communication_repository': CommunicationRepositoryInterface,
+        'auth_service': AuthServiceInterface,
+        'embedding_service': EmbeddingServiceInterface,
+        'search_service': SearchServiceInterface,
+        'database_service': DatabaseServiceInterface,
+        'unit_of_work': UnitOfWorkInterface,
+        'cache_service': CacheServiceInterface
     }
     
     @classmethod
     def get_service(cls, service_name: str, **kwargs) -> Any:
         """
-        Get service instance by name. Creates singleton instances.
+        DEPRECATED: Get service instance by name.
         
-        Args:
-            service_name: Name of the service to get
-            **kwargs: Additional arguments for service instantiation
-            
-        Returns:
-            Service instance
+        This method now delegates to the new DI container.
+        Use container.resolve(ServiceType) instead.
         """
-        with cls._lock:
-            if service_name not in cls._instances:
-                cls._instances[service_name] = cls._create_service(service_name, **kwargs)
-            
-            return cls._instances[service_name]
+        warnings.warn(
+            f"ServiceRegistry.get_service('{service_name}') is deprecated. "
+            "Use container.resolve(ServiceType) instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
+        if service_name not in cls._service_type_mapping:
+            raise ValueError(f"Unknown service: {service_name}")
+        
+        service_type = cls._service_type_mapping[service_name]
+        container = get_container()
+        
+        try:
+            return container.resolve(service_type)
+        except DependencyResolutionError as e:
+            logger.error(f"Failed to resolve service {service_name}: {str(e)}")
+            raise RuntimeError(f"Service resolution failed: {str(e)}") from e
     
     @classmethod
     def _create_service(cls, service_name: str, **kwargs) -> Any:
-        """Create service instance from configuration."""
-        if service_name not in cls._service_config:
-            raise ValueError(f"Unknown service: {service_name}")
-        
-        service_path = cls._service_config[service_name]
-        module_path, class_name = service_path.rsplit('.', 1)
-        
-        try:
-            module = __import__(module_path, fromlist=[class_name])
-            service_class = getattr(module, class_name)
-            return service_class(**kwargs)
-        except Exception as e:
-            logger.error(f"Failed to create service {service_name}: {str(e)}")
-            raise RuntimeError(f"Service creation failed: {str(e)}")
+        """DEPRECATED: Use DI container instead."""
+        return cls.get_service(service_name, **kwargs)
     
     @classmethod
     def register_service(cls, service_name: str, service_class_path: str):
-        """Register a new service implementation."""
-        cls._service_config[service_name] = service_class_path
+        """
+        DEPRECATED: Register a new service implementation.
+        Use application.dependencies.register_dependencies() instead.
+        """
+        warnings.warn(
+            "ServiceRegistry.register_service() is deprecated. "
+            "Use application.dependencies.register_dependencies() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        # No-op for backward compatibility
+        pass
     
     @classmethod
     def get_user_repository(cls, **kwargs) -> UserRepositoryInterface:
-        """Get user repository instance."""
+        """DEPRECATED: Use container.resolve(UserRepositoryInterface) instead."""
         return cls.get_service('user_repository', **kwargs)
     
     @classmethod
     def get_role_repository(cls, **kwargs) -> RoleRepositoryInterface:
-        """Get role repository instance."""
+        """DEPRECATED: Use container.resolve(RoleRepositoryInterface) instead."""
         return cls.get_service('role_repository', **kwargs)
     
     @classmethod
     def get_industry_repository(cls, **kwargs) -> IndustryRepositoryInterface:
-        """Get industry repository instance."""
+        """DEPRECATED: Use container.resolve(IndustryRepositoryInterface) instead."""
         return cls.get_service('industry_repository', **kwargs)
     
     @classmethod
     def get_communication_repository(cls, **kwargs) -> CommunicationRepositoryInterface:
-        """Get communication repository instance."""
+        """DEPRECATED: Use container.resolve(CommunicationRepositoryInterface) instead."""
         return cls.get_service('communication_repository', **kwargs)
     
     @classmethod
     def get_auth_service(cls, **kwargs) -> AuthServiceInterface:
-        """Get authentication service instance."""
+        """DEPRECATED: Use container.resolve(AuthServiceInterface) instead."""
         return cls.get_service('auth_service', **kwargs)
     
     @classmethod
     def get_embedding_service(cls, **kwargs) -> EmbeddingServiceInterface:
-        """Get embedding service instance."""
+        """DEPRECATED: Use container.resolve(EmbeddingServiceInterface) instead."""
         return cls.get_service('embedding_service', **kwargs)
     
     @classmethod
     def get_search_service(cls, **kwargs) -> SearchServiceInterface:
-        """Get search service instance."""
+        """DEPRECATED: Use container.resolve(SearchServiceInterface) instead."""
         return cls.get_service('search_service', **kwargs)
     
     @classmethod
     def get_database_service(cls, **kwargs) -> DatabaseServiceInterface:
-        """Get database service instance."""
+        """DEPRECATED: Use container.resolve(DatabaseServiceInterface) instead."""
         return cls.get_service('database_service', **kwargs)
     
     @classmethod
     def get_unit_of_work(cls, **kwargs) -> UnitOfWorkInterface:
-        """Get unit of work instance."""
+        """DEPRECATED: Use container.resolve(UnitOfWorkInterface) instead."""
         return cls.get_service('unit_of_work', **kwargs)
     
     @classmethod
     def get_cache_service(cls, **kwargs) -> CacheServiceInterface:
-        """Get cache service instance."""
+        """DEPRECATED: Use container.resolve(CacheServiceInterface) instead."""
         return cls.get_service('cache_service', **kwargs)
     
     @classmethod
     def clear_cache(cls):
-        """Clear all cached service instances."""
-        with cls._lock:
-            cls._instances.clear()
+        """
+        DEPRECATED: Clear all cached service instances.
+        Use container.clear_scoped_services() instead.
+        """
+        warnings.warn(
+            "ServiceRegistry.clear_cache() is deprecated. "
+            "Use container.clear_scoped_services() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        container = get_container()
+        container.clear_scoped_services()
     
     @classmethod
     def clear_service(cls, service_name: str):
-        """Clear specific service from cache."""
-        with cls._lock:
-            if service_name in cls._instances:
-                del cls._instances[service_name]
+        """DEPRECATED: No equivalent in new DI container."""
+        warnings.warn(
+            "ServiceRegistry.clear_service() is deprecated and has no equivalent in the new DI container.",
+            DeprecationWarning,
+            stacklevel=2
+        )
 
 
-class ServiceContainer:
+class LegacyServiceContainer:
     """
-    Dependency injection container for managing service dependencies.
-    Provides a cleaner interface for service access in business logic.
+    DEPRECATED: Legacy service container - use @inject decorator instead.
+    
+    This class provides backward compatibility for the old property-based
+    service access pattern. New code should use dependency injection.
+    
+    MIGRATION EXAMPLE:
+    
+    OLD:
+        class MyManager:
+            def __init__(self):
+                self.services = LegacyServiceContainer()
+            
+            def do_something(self):
+                user = self.services.users.get_by_id(1)
+    
+    NEW:
+        @inject
+        def do_something(user_repo: UserRepositoryInterface):
+            user = user_repo.get_by_id(1)
     """
     
     def __init__(self):
-        self._registry = ServiceRegistry
+        warnings.warn(
+            "LegacyServiceContainer is deprecated. Use @inject decorator instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        self._container = get_container()
     
     @property
     def users(self) -> UserRepositoryInterface:
-        """Get user repository."""
-        return self._registry.get_user_repository()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(UserRepositoryInterface)
     
     @property
     def roles(self) -> RoleRepositoryInterface:
-        """Get role repository."""
-        return self._registry.get_role_repository()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(RoleRepositoryInterface)
     
     @property
     def industries(self) -> IndustryRepositoryInterface:
-        """Get industry repository."""
-        return self._registry.get_industry_repository()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(IndustryRepositoryInterface)
     
     @property
     def communication(self) -> CommunicationRepositoryInterface:
-        """Get communication repository."""
-        return self._registry.get_communication_repository()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(CommunicationRepositoryInterface)
     
     @property
     def auth(self) -> AuthServiceInterface:
-        """Get authentication service."""
-        return self._registry.get_auth_service()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(AuthServiceInterface)
     
     @property
     def embedding(self) -> EmbeddingServiceInterface:
-        """Get embedding service."""
-        return self._registry.get_embedding_service()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(EmbeddingServiceInterface)
     
     @property
     def search(self) -> SearchServiceInterface:
-        """Get search service."""
-        return self._registry.get_search_service()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(SearchServiceInterface)
     
     @property
     def database(self) -> DatabaseServiceInterface:
-        """Get database service."""
-        return self._registry.get_database_service()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(DatabaseServiceInterface)
     
     @property
     def unit_of_work(self) -> UnitOfWorkInterface:
-        """Get unit of work."""
-        return self._registry.get_unit_of_work()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(UnitOfWorkInterface)
     
     @property
     def cache(self) -> CacheServiceInterface:
-        """Get cache service."""
-        return self._registry.get_cache_service()
+        """DEPRECATED: Use dependency injection instead."""
+        return self._container.resolve(CacheServiceInterface)
+
+
+# Backward compatibility alias
+ServiceContainer = LegacyServiceContainer
 
 
 class ServiceMixin:
     """
-    Mixin to provide easy access to services in views and business logic.
+    DEPRECATED: Legacy service mixin - use @inject decorator instead.
+    
+    This mixin provides backward compatibility for the old property-based
+    service access pattern. New code should use dependency injection.
+    
+    MIGRATION EXAMPLE:
+    
+    OLD:
+        class MyView(ServiceMixin, APIView):
+            def post(self, request):
+                user = self.services.users.get_by_id(request.user.id)
+    
+    NEW:
+        class MyView(APIView):
+            @inject
+            def post(self, request, user_repo: UserRepositoryInterface):
+                user = user_repo.get_by_id(request.user.id)
     """
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._services = ServiceContainer()
+        warnings.warn(
+            "ServiceMixin is deprecated. Use @inject decorator instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        self._services = LegacyServiceContainer()
     
     @property
-    def services(self) -> ServiceContainer:
-        """Get service container."""
+    def services(self) -> LegacyServiceContainer:
+        """DEPRECATED: Get service container."""
         return self._services
 
 
-# Service factory functions for common use cases
+# DEPRECATED: Legacy service factory functions - use DI container instead
+
 def get_user_repository() -> UserRepositoryInterface:
-    """Get user repository instance."""
-    return ServiceRegistry.get_user_repository()
+    """DEPRECATED: Use container.resolve(UserRepositoryInterface) instead."""
+    warnings.warn(
+        "get_user_repository() is deprecated. Use container.resolve(UserRepositoryInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(UserRepositoryInterface)
 
 
 def get_role_repository() -> RoleRepositoryInterface:
-    """Get role repository instance."""
-    return ServiceRegistry.get_role_repository()
+    """DEPRECATED: Use container.resolve(RoleRepositoryInterface) instead."""
+    warnings.warn(
+        "get_role_repository() is deprecated. Use container.resolve(RoleRepositoryInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(RoleRepositoryInterface)
 
 
 def get_industry_repository() -> IndustryRepositoryInterface:
-    """Get industry repository instance."""
-    return ServiceRegistry.get_industry_repository()
+    """DEPRECATED: Use container.resolve(IndustryRepositoryInterface) instead."""
+    warnings.warn(
+        "get_industry_repository() is deprecated. Use container.resolve(IndustryRepositoryInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(IndustryRepositoryInterface)
 
 
 def get_communication_repository() -> CommunicationRepositoryInterface:
-    """Get communication repository instance."""
-    return ServiceRegistry.get_communication_repository()
+    """DEPRECATED: Use container.resolve(CommunicationRepositoryInterface) instead."""
+    warnings.warn(
+        "get_communication_repository() is deprecated. Use container.resolve(CommunicationRepositoryInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(CommunicationRepositoryInterface)
 
 
 def get_auth_service() -> AuthServiceInterface:
-    """Get authentication service instance."""
-    return ServiceRegistry.get_auth_service()
+    """DEPRECATED: Use container.resolve(AuthServiceInterface) instead."""
+    warnings.warn(
+        "get_auth_service() is deprecated. Use container.resolve(AuthServiceInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(AuthServiceInterface)
 
 
 def get_embedding_service() -> EmbeddingServiceInterface:
-    """Get embedding service instance."""
-    return ServiceRegistry.get_embedding_service()
+    """DEPRECATED: Use container.resolve(EmbeddingServiceInterface) instead."""
+    warnings.warn(
+        "get_embedding_service() is deprecated. Use container.resolve(EmbeddingServiceInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(EmbeddingServiceInterface)
 
 
 def get_search_service() -> SearchServiceInterface:
-    """Get search service instance."""
-    return ServiceRegistry.get_search_service()
+    """DEPRECATED: Use container.resolve(SearchServiceInterface) instead."""
+    warnings.warn(
+        "get_search_service() is deprecated. Use container.resolve(SearchServiceInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(SearchServiceInterface)
 
 
 def get_database_service() -> DatabaseServiceInterface:
-    """Get database service instance."""
-    return ServiceRegistry.get_database_service()
+    """DEPRECATED: Use container.resolve(DatabaseServiceInterface) instead."""
+    warnings.warn(
+        "get_database_service() is deprecated. Use container.resolve(DatabaseServiceInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(DatabaseServiceInterface)
 
 
 def get_unit_of_work() -> UnitOfWorkInterface:
-    """Get unit of work instance."""
-    return ServiceRegistry.get_unit_of_work()
+    """DEPRECATED: Use container.resolve(UnitOfWorkInterface) instead."""
+    warnings.warn(
+        "get_unit_of_work() is deprecated. Use container.resolve(UnitOfWorkInterface) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return get_container().resolve(UnitOfWorkInterface)
 
 
 class ServiceConfig:
     """
-    Configuration for services based on environment.
+    DEPRECATED: Legacy service configuration - use application.dependencies instead.
+    
+    Configuration is now handled in application.dependencies.register_dependencies().
     """
-    
-    # Development configuration
-    DEVELOPMENT = {
-        'user_repository': 'shared.repositories.user_repository.UserRepository',
-        'role_repository': 'shared.repositories.role_repository.RoleRepository',
-        'industry_repository': 'shared.repositories.industry_repository.IndustryRepository',
-        'communication_repository': 'shared.repositories.communication_repository.CommunicationRepository',
-        'auth_service': 'authentication.services.auth0_service.Auth0Service',
-        'embedding_service': 'authentication.services.azure_openai_service.AzureOpenAIService',
-        'search_service': 'authentication.services.azure_search_service.AzureSearchService',
-        'database_service': 'authentication.services.supabase_service.SupabaseService',
-    }
-    
-    # Testing configuration with mocks
-    TESTING = {
-        'user_repository': 'tests.mocks.mock_user_repository.MockUserRepository',
-        'role_repository': 'tests.mocks.mock_role_repository.MockRoleRepository',
-        'industry_repository': 'tests.mocks.mock_industry_repository.MockIndustryRepository',
-        'communication_repository': 'tests.mocks.mock_communication_repository.MockCommunicationRepository',
-        'auth_service': 'tests.mocks.mock_auth_service.MockAuthService',
-        'embedding_service': 'tests.mocks.mock_embedding_service.MockEmbeddingService',
-        'search_service': 'tests.mocks.mock_search_service.MockSearchService',
-        'database_service': 'tests.mocks.mock_database_service.MockDatabaseService',
-    }
-    
-    # Production configuration (same as development for now)
-    PRODUCTION = DEVELOPMENT.copy()
     
     @classmethod
     def configure_for_environment(cls, environment: str):
-        """Configure service registry for specific environment."""
-        config = getattr(cls, environment.upper(), cls.DEVELOPMENT)
-        
-        for service_name, service_class_path in config.items():
-            ServiceRegistry.register_service(service_name, service_class_path)
+        """DEPRECATED: Use application.dependencies.register_environment_dependencies() instead."""
+        warnings.warn(
+            "ServiceConfig.configure_for_environment() is deprecated. "
+            "Use application.dependencies.register_environment_dependencies() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        # Delegate to new dependency registration
+        from application.dependencies import register_environment_dependencies
+        register_environment_dependencies()
 
 
-# Configure for Django environment
+# DEPRECATED: Configure for Django environment
 def configure_services():
-    """Configure services based on Django settings."""
-    from django.conf import settings
+    """
+    DEPRECATED: Configure services based on Django settings.
     
-    environment = getattr(settings, 'ENVIRONMENT', 'development')
-    ServiceConfig.configure_for_environment(environment)
+    Use application.dependencies.register_dependencies() instead.
+    """
+    warnings.warn(
+        "configure_services() is deprecated. "
+        "Use application.dependencies.register_dependencies() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     
-    logger.info(f"Services configured for {environment} environment")
+    # Delegate to new dependency registration
+    from application.dependencies import register_dependencies, register_environment_dependencies
+    
+    register_dependencies()
+    register_environment_dependencies()
+    
+    logger.info("Services configured using new DI container (legacy compatibility mode)")
+
+
+# Migration helpers
+def migrate_to_di_container():
+    """
+    Helper function to assist with migration from ServiceRegistry to DI container.
+    
+    This function provides guidance on migrating existing code.
+    """
+    migration_guide = """
+    MIGRATION GUIDE: ServiceRegistry → DI Container
+    
+    1. Replace ServiceRegistry usage:
+       OLD: ServiceRegistry.get_user_repository()
+       NEW: container.resolve(UserRepositoryInterface)
+    
+    2. Replace ServiceMixin:
+       OLD: class MyView(ServiceMixin, APIView)
+       NEW: class MyView(APIView) with @inject decorator
+    
+    3. Replace property access:
+       OLD: self.services.users.get_by_id(1)
+       NEW: Inject UserRepositoryInterface in constructor
+    
+    4. Update service registration:
+       OLD: ServiceRegistry.register_service()
+       NEW: Use application.dependencies.register_dependencies()
+    
+    5. Environment configuration:
+       OLD: ServiceConfig.configure_for_environment()
+       NEW: application.dependencies.register_environment_dependencies()
+    
+    For detailed examples, see the documentation.
+    """
+    
+    print(migration_guide)
+    return migration_guide

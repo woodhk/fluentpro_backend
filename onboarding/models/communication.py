@@ -19,7 +19,6 @@ class UnitType(Enum):
     """Types of communication units/situations."""
     MEETING = "meeting"
     PRESENTATION = "presentation"
-    EMAIL = "email"
     PHONE_CALL = "phone_call"
     NEGOTIATION = "negotiation"
     TRAINING = "training"
