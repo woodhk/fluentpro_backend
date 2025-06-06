@@ -20,13 +20,16 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - application/container.py (modify) ✅
   - application/dependencies.py (modify) ✅
 
-  Step 4: Create interfaces for all services
+  Step 4: Create interfaces for all services ✅
   Relevant files:
-  - domains/authentication/services/interfaces.py (new file)
-  - domains/onboarding/services/interfaces.py (new file)
-  - domains/shared/repositories/base_repository.py (new file)
-  - infrastructure/external_services/auth0/client.py (new file)
-  - infrastructure/external_services/openai/client.py (new file)
+  - domains/authentication/services/interfaces.py (new file) ✅
+  - domains/onboarding/services/interfaces.py (new file) ✅
+  - domains/shared/repositories/base_repository.py (new file) ✅
+  - infrastructure/external_services/auth0/client.py (new file) ✅
+  - infrastructure/external_services/openai/client.py (new file) ✅
+  - infrastructure/external_services/azure/client.py (new file) ✅
+  - infrastructure/persistence/supabase/client.py (new file) ✅
+  - infrastructure/persistence/supabase/connection_pool.py (new file) ✅
 
   Step 5: Update all managers to accept injected dependencies
   Relevant files:
@@ -145,6 +148,8 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - application/dependencies.py (modify)
   - infrastructure/external_services/auth0/auth0_service_impl.py (new file)
   - infrastructure/external_services/openai/openai_service_impl.py (new file)
+  - infrastructure/external_services/azure/cognitive_service_impl.py (new file)
+  - infrastructure/persistence/supabase/supabase_service_impl.py (new file)
 
   Step 3: Add retry and circuit breaker decorators
   Relevant files:

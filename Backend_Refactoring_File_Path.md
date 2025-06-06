@@ -106,6 +106,7 @@ Final Folder Structure After Refactoring
   │   │   │   ├── __init__.py
   │   │   │   ├── client.py
   │   │   │   ├── connection_pool.py
+  │   │   │   ├── supabase_service_impl.py
   │   │   │   └── implementations/    # Concrete repositories
   │   │   │       ├── __init__.py
   │   │   │       ├── user_repository_impl.py
@@ -126,7 +127,7 @@ Final Folder Structure After Refactoring
   │   │   │   └── openai_service_impl.py
   │   │   └── azure/
   │   │       ├── __init__.py
-  │   │       ├── search_client.py
+  │   │       ├── client.py
   │   │       └── cognitive_service_impl.py
   │   ├── messaging/
   │   │   ├── __init__.py
