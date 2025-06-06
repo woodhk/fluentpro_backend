@@ -22,10 +22,11 @@ Final Folder Structure After Refactoring
   │   │   │   └── password_service.py
   │   │   ├── use_cases/
   │   │   │   ├── __init__.py
-  │   │   │   ├── login_user.py
-  │   │   │   ├── signup_user.py
-  │   │   │   ├── refresh_token.py
-  │   │   │   └── logout_user.py
+  │   │   │   ├── register_user.py
+  │   │   │   ├── authenticate_user.py
+  │   │   │   ├── refresh_user_token.py
+  │   │   │   ├── logout_user.py
+  │   │   │   └── validate_user_session.py
   │   │   ├── dto/
   │   │   │   ├── __init__.py
   │   │   │   ├── requests.py          # LoginRequest, SignupRequest
@@ -64,10 +65,16 @@ Final Folder Structure After Refactoring
   │   │   │   └── recommendation_service.py
   │   │   ├── use_cases/
   │   │   │   ├── __init__.py
-  │   │   │   ├── start_onboarding.py
-  │   │   │   ├── select_partners.py
-  │   │   │   ├── set_language_level.py
-  │   │   │   └── complete_onboarding.py
+  │   │   │   ├── start_onboarding_session.py
+  │   │   │   ├── select_native_language.py
+  │   │   │   ├── select_user_industry.py
+  │   │   │   ├── match_user_role_from_description.py
+  │   │   │   ├── create_custom_user_role.py
+  │   │   │   ├── select_communication_partners.py
+  │   │   │   ├── configure_partner_situations.py
+  │   │   │   ├── complete_onboarding_flow.py
+  │   │   │   ├── get_onboarding_progress.py
+  │   │   │   └── generate_onboarding_summary.py
   │   │   ├── dto/
   │   │   │   ├── __init__.py
   │   │   │   ├── requests.py
