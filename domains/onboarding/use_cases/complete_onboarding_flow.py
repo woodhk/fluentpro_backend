@@ -25,10 +25,25 @@ logger = logging.getLogger(__name__)
 
 class CompleteOnboardingFlowUseCase(UseCase[CompleteOnboardingRequest, OnboardingSummaryResponse]):
     """
-    Use case for completing the onboarding flow.
+    Completes the user onboarding flow and generates a summary.
     
-    Handles final onboarding completion, status updates,
-    and comprehensive summary generation.
+    Flow:
+    1. Extract user ID from session ID
+    2. Retrieve user profile with all onboarding data
+    3. Validate all required onboarding steps are completed
+    4. Update user's onboarding status to completed
+    5. Gather all onboarding selections (language, industry, role, partners)
+    6. Generate comprehensive onboarding summary
+    7. Return summary with completion timestamp
+    
+    Errors:
+    - SupabaseUserNotFoundError: User not found in database
+    - BusinessLogicError: Missing required onboarding data or completion failed
+    
+    Dependencies:
+    - IUserRepository: To retrieve and update user profile
+    - IPartnerRepository: To fetch selected partner details
+    - IOnboardingService: For onboarding completion business logic
     """
     
     def __init__(

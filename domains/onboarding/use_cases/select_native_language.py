@@ -21,10 +21,21 @@ logger = logging.getLogger(__name__)
 
 class SelectNativeLanguage:
     """
-    Use case for selecting user's native language.
+    Selects and assigns a native language to a user profile.
     
-    Handles native language selection and validation,
-    with potential onboarding progression.
+    Flow:
+    1. Validate language code against NativeLanguage enum
+    2. Find user by Auth0 ID
+    3. Update user profile with selected native language
+    4. Return success response with language selection
+    
+    Errors:
+    - ValidationError: Invalid language code not in enum
+    - SupabaseUserNotFoundError: User not found by Auth0 ID
+    - BusinessLogicError: Failed to update native language
+    
+    Dependencies:
+    - IUserRepository: To find and update user profile
     """
     
     def __init__(

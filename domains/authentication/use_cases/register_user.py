@@ -26,10 +26,24 @@ logger = logging.getLogger(__name__)
 
 class RegisterUserUseCase(UseCase[SignupRequest, AuthResponse]):
     """
-    Use case for registering new users.
+    Registers a new user in the system.
     
-    Handles user registration with Auth0 and Supabase,
-    including validation and initial authentication.
+    Flow:
+    1. Check if user already exists in database
+    2. Create user in Auth0 with email and password
+    3. Save user record in Supabase database
+    4. Authenticate user to get initial tokens
+    5. Return authentication response with user data
+    
+    Errors:
+    - ValidationError: Invalid registration data
+    - ConflictError: User with email already exists
+    - Auth0Error: Failed to create user in Auth0
+    - BusinessLogicError: General registration process failure
+    
+    Dependencies:
+    - IAuthService: For Auth0 user creation and authentication
+    - IUserRepository: To check existence and save user data
     """
     
     def __init__(

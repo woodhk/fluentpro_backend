@@ -26,10 +26,26 @@ logger = logging.getLogger(__name__)
 
 class SelectCommunicationPartnersUseCase(UseCase[SelectCommunicationPartnersRequest, OnboardingStepResponse]):
     """
-    Use case for selecting communication partners.
+    Selects communication partners for user's English practice scenarios.
     
-    Handles selection of who the user typically communicates
-    with in English at work (e.g., clients, colleagues, stakeholders).
+    Flow:
+    1. Validate at least one partner is selected
+    2. Find user to ensure they exist
+    3. Resolve partner IDs (supports both UUIDs and slugs)
+    4. Validate all partner IDs exist and are active
+    5. Save partner selections to repository
+    6. Convert saved data to domain objects with priority
+    7. Return list of partner selections
+    
+    Errors:
+    - ValidationError: No partners selected or invalid partner IDs
+    - SupabaseUserNotFoundError: User not found in database
+    - BusinessLogicError: Failed to save partner selections
+    
+    Dependencies:
+    - IPartnerRepository: To validate partners and save selections
+    - IUserRepository: To verify user exists
+    - IProfileSetupService: For profile setup business logic
     """
     
     def __init__(

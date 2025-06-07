@@ -23,10 +23,23 @@ logger = logging.getLogger(__name__)
 
 class AuthenticateUserUseCase(UseCase[LoginRequest, AuthResponse]):
     """
-    Use case for authenticating users.
+    Authenticates a user with email and password.
     
-    Handles user authentication with Auth0 and validates
-    user existence in Supabase.
+    Flow:
+    1. Authenticate user via Auth0 service
+    2. Verify user exists in Supabase database
+    3. Check if user account is active
+    4. Generate user and token response objects
+    5. Return authentication response with tokens
+    
+    Errors:
+    - AuthenticationError: Invalid email/password or deactivated account
+    - SupabaseUserNotFoundError: User authenticated but not in database
+    - BusinessLogicError: General authentication process failure
+    
+    Dependencies:
+    - IAuthService: For Auth0 authentication
+    - IUserRepository: To verify user existence and status
     """
     
     def __init__(

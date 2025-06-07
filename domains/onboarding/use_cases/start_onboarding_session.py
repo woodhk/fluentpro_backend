@@ -23,10 +23,22 @@ logger = logging.getLogger(__name__)
 
 class StartOnboardingSessionUseCase(UseCase[StartOnboardingRequest, OnboardingSessionResponse]):
     """
-    Use case for starting an onboarding session.
+    Starts or resumes an onboarding session for a user.
     
-    Initializes or retrieves the onboarding flow for a user
-    and sets up the appropriate starting point based on progress.
+    Flow:
+    1. Retrieve user profile to check onboarding status
+    2. Determine current onboarding phase from user data
+    3. Create onboarding flow instance with progress
+    4. Update flow steps based on completed items
+    5. Generate session ID and calculate expiration
+    6. Return session response with current step and progress
+    
+    Errors:
+    - SupabaseUserNotFoundError: User not found in database
+    - BusinessLogicError: Failed to create onboarding session
+    
+    Dependencies:
+    - IUserRepository: To retrieve user profile and onboarding status
     """
     
     def __init__(

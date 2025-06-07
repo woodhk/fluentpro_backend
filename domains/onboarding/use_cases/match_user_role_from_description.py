@@ -21,10 +21,24 @@ logger = logging.getLogger(__name__)
 
 class MatchUserRoleFromDescription:
     """
-    Use case for matching roles based on job description.
+    Matches existing roles to a user's job description using AI.
     
-    Uses AI services to find existing roles that match
-    the user's job description and requirements.
+    Flow:
+    1. Generate embedding from job description using OpenAI
+    2. Search for similar roles in Azure Cognitive Search
+    3. Apply industry filter if provided
+    4. Filter results by minimum relevancy score (70%)
+    5. Rank and limit results to requested maximum
+    6. Return list of matched roles with scores
+    
+    Errors:
+    - AzureOpenAIError: Failed to generate job description embedding
+    - AzureSearchError: Failed to search for matching roles
+    - BusinessLogicError: General role matching failure
+    
+    Dependencies:
+    - IAzureCognitiveSearchClient: For semantic role search
+    - IOpenAIClient: For embedding generation
     """
     
     # Configuration constants

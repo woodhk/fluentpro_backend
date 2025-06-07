@@ -21,10 +21,23 @@ logger = logging.getLogger(__name__)
 
 class SelectUserIndustry:
     """
-    Use case for selecting user's industry.
+    Selects and assigns an industry to a user profile.
     
-    Handles industry selection and validation,
-    with potential onboarding progression.
+    Flow:
+    1. Validate industry selection (either ID or name required)
+    2. Look up industry by ID or name in repository
+    3. Find user by Auth0 ID
+    4. Update user profile with selected industry
+    5. Return success response with industry details
+    
+    Errors:
+    - ValidationError: Missing industry or invalid industry ID/name
+    - SupabaseUserNotFoundError: User not found by Auth0 ID
+    - BusinessLogicError: Failed to update user industry
+    
+    Dependencies:
+    - IUserRepository: To find and update user profile
+    - IIndustryRepository: To validate and retrieve industry data
     """
     
     def __init__(
