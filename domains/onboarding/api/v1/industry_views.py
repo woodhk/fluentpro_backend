@@ -4,59 +4,58 @@ Handles industry selection during onboarding.
 """
 
 from rest_framework import status
+from rest_framework.response import Response
 import logging
 
+from api.common.base_views import BaseAPIView
 from core.view_base import AuthenticatedView, VersionedView, CachedView
 from core.responses import APIResponse
 from core.exceptions import ValidationError
 from authentication.business.user_manager import UserManager
+from application.container import container
+from domains.onboarding.dto.requests import UserIndustryRequest
 
 logger = logging.getLogger(__name__)
 
 
-class SetIndustryView(AuthenticatedView, VersionedView):
+class SetIndustryView(BaseAPIView, AuthenticatedView, VersionedView):
     """
     Set user's industry endpoint.
     Phase 1 onboarding step.
     """
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.select_user_industry = container.onboarding_use_cases.select_user_industry()
+    
     def post(self, request):
         """Set user's industry."""
+        # Parse request
         try:
-            industry_id = request.data.get('industry_id')
-            industry_name = request.data.get('industry_name')
-            
-            if not industry_id and not industry_name:
-                raise ValidationError("Either industry_id or industry_name is required")
-            
-            # Update user's industry
-            auth0_id = self.get_auth0_user_id()
-            user_manager = UserManager()
-            
-            # Choose method based on which parameter is provided
-            if industry_name:
-                result = user_manager.update_industry_by_name(auth0_id, industry_name)
-            else:
-                result = user_manager.update_industry(auth0_id, industry_id)
-            
-            return APIResponse.success(
-                data={
-                    'message': 'Industry updated successfully',
-                    'industry_id': result.get('industry_id'),
-                    'industry_name': result.get('industry_name'),
-                    'user_id': result.get('user_id')
-                }
-            )
-            
-        except ValidationError:
-            raise
+            industry_request = UserIndustryRequest(**request.data)
         except Exception as e:
-            logger.error(f"Industry update error: {str(e)}")
-            return APIResponse.error(
-                message="Failed to update industry",
-                details=str(e),
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            return Response(
+                {"errors": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Get user auth0_id
+        try:
+            auth0_id = self.get_auth0_user_id()
+        except Exception as e:
+            return Response(
+                {"error": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Execute use case
+        return self.handle_use_case_sync(
+            lambda: self.select_user_industry.execute(
+                auth0_id, 
+                industry_request.industry_id, 
+                industry_request.industry_name
+            )
+        )
 
 
 class GetAvailableIndustriesView(CachedView, VersionedView):

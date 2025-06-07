@@ -18,6 +18,38 @@ class ProficiencyLevel(str, Enum):
     NATIVE = "native"
 
 
+class NativeLanguageRequest(BaseModel):
+    """DTO for setting native language."""
+    native_language: str = Field(..., description="User's native language")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "native_language": "english"
+            }
+        }
+
+
+class UserIndustryRequest(BaseModel):
+    """DTO for setting user industry."""
+    industry_id: Optional[str] = Field(None, description="Industry ID")
+    industry_name: Optional[str] = Field(None, description="Industry name")
+    
+    @validator('industry_id', 'industry_name')
+    def validate_industry_selection(cls, v, values):
+        """Ensure either industry_id or industry_name is provided."""
+        if not v and not values.get('industry_id') and not values.get('industry_name'):
+            raise ValueError('Either industry_id or industry_name must be provided')
+        return v
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "industry_id": "123e4567-e89b-12d3-a456-426614174000"
+            }
+        }
+
+
 class StartOnboardingRequest(BaseModel):
     """DTO for starting the onboarding process."""
     user_id: str = Field(..., description="User ID to start onboarding for")

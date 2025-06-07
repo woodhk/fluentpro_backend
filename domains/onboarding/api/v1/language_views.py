@@ -4,63 +4,57 @@ Handles native language selection during onboarding.
 """
 
 from rest_framework import status
+from rest_framework.response import Response
 import logging
 
+from api.common.base_views import BaseAPIView
 from core.view_base import AuthenticatedView, VersionedView, CachedView
 from core.responses import APIResponse
 from core.exceptions import ValidationError
 from authentication.business.user_manager import UserManager
 from authentication.models.user import NativeLanguage
+from application.container import container
+from domains.onboarding.dto.requests import NativeLanguageRequest
 
 logger = logging.getLogger(__name__)
 
 
-class SetNativeLanguageView(AuthenticatedView, VersionedView):
+class SetNativeLanguageView(BaseAPIView, AuthenticatedView, VersionedView):
     """
     Set user's native language endpoint.
     Phase 1 onboarding step.
     """
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.select_native_language = container.onboarding_use_cases.select_native_language()
+    
     def post(self, request):
         """Set user's native language."""
+        # Parse request
         try:
-            native_language = request.data.get('native_language')
-            
-            if not native_language:
-                raise ValidationError("native_language is required")
-            
-            # Validate language against enum
-            try:
-                language_enum = NativeLanguage(native_language)
-            except ValueError:
-                valid_languages = [lang.value for lang in NativeLanguage]
-                raise ValidationError(
-                    f"native_language must be one of: {', '.join(valid_languages)}"
-                )
-            
-            # Update user's native language
-            auth0_id = self.get_auth0_user_id()
-            user_manager = UserManager()
-            
-            result = user_manager.update_native_language(auth0_id, native_language)
-            
-            return APIResponse.success(
-                data={
-                    'message': 'Native language updated successfully',
-                    'native_language': native_language,
-                    'user_id': result.get('user_id')
-                }
-            )
-            
-        except ValidationError:
-            raise
+            language_request = NativeLanguageRequest(**request.data)
         except Exception as e:
-            logger.error(f"Native language update error: {str(e)}")
-            return APIResponse.error(
-                message="Failed to update native language",
-                details=str(e),
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            return Response(
+                {"errors": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Get user auth0_id
+        try:
+            auth0_id = self.get_auth0_user_id()
+        except Exception as e:
+            return Response(
+                {"error": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Execute use case
+        return self.handle_use_case_sync(
+            lambda: self.select_native_language.execute(
+                auth0_id, language_request.native_language
+            )
+        )
 
 
 class GetAvailableLanguagesView(CachedView, VersionedView):
