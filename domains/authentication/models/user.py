@@ -9,6 +9,8 @@ from enum import Enum
 import logging
 
 from core.utils import calculate_age, validate_email
+from domains.shared.models.base_entity import BaseEntity
+from domains.authentication.events.user_events import UserRegisteredEvent
 
 logger = logging.getLogger(__name__)
 
@@ -30,28 +32,48 @@ class NativeLanguage(Enum):
     CHINESE_SIMPLIFIED = "chinese_simplified"
 
 
-@dataclass
-class User:
+class User(BaseEntity):
     """
     Core user domain model representing a FluentPro user.
     """
-    id: str
-    full_name: str
-    email: str
-    date_of_birth: date
-    auth0_id: str
-    is_active: bool = True
-    native_language: Optional[NativeLanguage] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
     
-    def __post_init__(self):
-        """Validate user data after initialization."""
+    def __init__(self, email: str, full_name: str, date_of_birth: date, auth0_id: str, 
+                 id: Optional[str] = None, is_active: bool = True, 
+                 native_language: Optional[NativeLanguage] = None,
+                 created_at: Optional[datetime] = None, updated_at: Optional[datetime] = None):
+        super().__init__()
+        self.id = id  # Will be set by repository
+        self.email = email
+        self.full_name = full_name
+        self.date_of_birth = date_of_birth
+        self.auth0_id = auth0_id
+        self.is_active = is_active
+        self.native_language = native_language
+        
+        # Override timestamps if provided (for reconstruction from DB)
+        if created_at:
+            self.created_at = created_at
+        if updated_at:
+            self.updated_at = updated_at
+        
+        # Validate user data
         if not validate_email(self.email):
             raise ValueError(f"Invalid email address: {self.email}")
         
         if self.age < 13:
             raise ValueError("User must be at least 13 years old")
+        
+        # Note: UserRegisteredEvent will be raised by the repository when ID is assigned
+    
+    def mark_as_registered(self, user_id: str) -> None:
+        """Mark user as registered and raise domain event."""
+        self.id = user_id
+        self.add_domain_event(UserRegisteredEvent(
+            user_id=self.id,
+            email=self.email,
+            full_name=self.full_name,
+            auth0_id=self.auth0_id
+        ))
     
     @property
     def age(self) -> int:
@@ -102,11 +124,11 @@ class User:
                 logger.warning(f"Invalid native_language value in database: {data.get('native_language')}")
         
         return cls(
-            id=data['id'],
-            full_name=data['full_name'],
             email=data['email'],
+            full_name=data['full_name'],
             date_of_birth=date_of_birth,
             auth0_id=data['auth0_id'],
+            id=data['id'],
             is_active=data.get('is_active', True),
             native_language=native_language,
             created_at=created_at,

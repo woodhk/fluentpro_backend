@@ -7,6 +7,8 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
+from domains.shared.models.base_entity import BaseEntity
+
 
 class HierarchyLevel(Enum):
     """Enumeration of role hierarchy levels."""
@@ -23,17 +25,27 @@ class RoleSource(Enum):
     CREATED = "created"    # User created a new role
 
 
-@dataclass
-class Industry:
+class Industry(BaseEntity):
     """
     Industry domain model.
     """
-    id: str
-    name: str
-    description: Optional[str] = None
-    sort_order: int = 0
-    is_active: bool = True
-    created_at: Optional[datetime] = None
+    
+    def __init__(self, name: str, id: Optional[str] = None, 
+                 description: Optional[str] = None, sort_order: int = 0,
+                 is_active: bool = True, created_at: Optional[datetime] = None,
+                 updated_at: Optional[datetime] = None):
+        super().__init__()
+        self.id = id  # Will be set by repository
+        self.name = name
+        self.description = description
+        self.sort_order = sort_order
+        self.is_active = is_active
+        
+        # Override timestamps if provided (for reconstruction from DB)
+        if created_at:
+            self.created_at = created_at
+        if updated_at:
+            self.updated_at = updated_at
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert industry to dictionary for API responses."""
@@ -52,30 +64,47 @@ class Industry:
         if data.get('created_at'):
             created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
         
+        updated_at = None
+        if data.get('updated_at'):
+            updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+        
         return cls(
-            id=data['id'],
             name=data['name'],
+            id=data['id'],
             description=data.get('description'),
             sort_order=data.get('sort_order', 0),
             is_active=data.get('is_active', True),
-            created_at=created_at
+            created_at=created_at,
+            updated_at=updated_at
         )
 
 
-@dataclass
-class Role:
+class Role(BaseEntity):
     """
     Role domain model representing job roles/positions.
     """
-    id: str
-    title: str
-    description: str
-    industry_id: str
-    industry_name: Optional[str] = None
-    hierarchy_level: HierarchyLevel = HierarchyLevel.ASSOCIATE
-    search_keywords: List[str] = field(default_factory=list)
-    is_active: bool = True
-    created_at: Optional[datetime] = None
+    
+    def __init__(self, title: str, description: str, industry_id: str,
+                 id: Optional[str] = None, industry_name: Optional[str] = None,
+                 hierarchy_level: HierarchyLevel = HierarchyLevel.ASSOCIATE,
+                 search_keywords: Optional[List[str]] = None,
+                 is_active: bool = True, created_at: Optional[datetime] = None,
+                 updated_at: Optional[datetime] = None):
+        super().__init__()
+        self.id = id  # Will be set by repository
+        self.title = title
+        self.description = description
+        self.industry_id = industry_id
+        self.industry_name = industry_name
+        self.hierarchy_level = hierarchy_level
+        self.search_keywords = search_keywords or []
+        self.is_active = is_active
+        
+        # Override timestamps if provided (for reconstruction from DB)
+        if created_at:
+            self.created_at = created_at
+        if updated_at:
+            self.updated_at = updated_at
     
     @property
     def keywords_as_string(self) -> str:
@@ -127,6 +156,10 @@ class Role:
         if data.get('created_at'):
             created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
         
+        updated_at = None
+        if data.get('updated_at'):
+            updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+        
         hierarchy_level = HierarchyLevel.ASSOCIATE
         if data.get('hierarchy_level'):
             try:
@@ -142,15 +175,16 @@ class Role:
             search_keywords = []
         
         return cls(
-            id=data['id'],
             title=data['title'],
             description=data['description'],
             industry_id=data['industry_id'],
+            id=data['id'],
             industry_name=data.get('industry_name'),
             hierarchy_level=hierarchy_level,
             search_keywords=search_keywords,
             is_active=data.get('is_active', True),
-            created_at=created_at
+            created_at=created_at,
+            updated_at=updated_at
         )
 
 

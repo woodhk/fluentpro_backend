@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from enum import Enum
 
+from domains.shared.models.base_entity import BaseEntity
+
 
 class OnboardingPhase(Enum):
     """Phases of the onboarding process."""
@@ -81,21 +83,30 @@ class OnboardingStep:
         }
 
 
-@dataclass
-class OnboardingSession:
+class OnboardingSession(BaseEntity):
     """
     Complete onboarding session for a user.
     """
-    user_id: str
-    current_phase: OnboardingPhase = OnboardingPhase.NOT_STARTED
-    steps: List[OnboardingStep] = field(default_factory=list)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
     
-    def __post_init__(self):
-        """Initialize default steps if none provided."""
-        if not self.steps:
-            self.steps = self._create_default_steps()
+    def __init__(self, user_id: str, 
+                 current_phase: OnboardingPhase = OnboardingPhase.NOT_STARTED,
+                 steps: Optional[List[OnboardingStep]] = None,
+                 started_at: Optional[datetime] = None,
+                 completed_at: Optional[datetime] = None,
+                 created_at: Optional[datetime] = None,
+                 updated_at: Optional[datetime] = None):
+        super().__init__()
+        self.user_id = user_id
+        self.current_phase = current_phase
+        self.steps = steps or self._create_default_steps()
+        self.started_at = started_at
+        self.completed_at = completed_at
+        
+        # Override timestamps if provided (for reconstruction from DB)
+        if created_at:
+            self.created_at = created_at
+        if updated_at:
+            self.updated_at = updated_at
     
     def _create_default_steps(self) -> List[OnboardingStep]:
         """Create default onboarding steps."""
