@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
 
-from core.interfaces import UserRepositoryInterface
+from domains.authentication.repositories.interfaces import IUserRepository
 from core.exceptions import (
     SupabaseUserNotFoundError,
     ValidationError,
@@ -19,17 +19,17 @@ from authentication.services.supabase_service import SupabaseService
 logger = logging.getLogger(__name__)
 
 
-class UserRepository(UserRepositoryInterface):
+class UserRepository(IUserRepository):
     """
-    Concrete implementation of UserRepositoryInterface using Supabase.
+    Concrete implementation of IUserRepository using Supabase.
     Provides CRUD operations for users and user profiles.
     """
     
     def __init__(self, supabase_service: Optional[SupabaseService] = None):
         self.supabase = supabase_service or SupabaseService()
     
-    def get_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID."""
+    def find_by_id(self, user_id: str) -> Optional[User]:
+        """Find user by ID."""
         try:
             response = self.supabase.client.table('users')\
                 .select('*')\
@@ -45,8 +45,8 @@ class UserRepository(UserRepositoryInterface):
             logger.error(f"Failed to get user by ID {user_id}: {str(e)}")
             raise DatabaseError(f"Failed to retrieve user: {str(e)}")
     
-    def get_by_auth0_id(self, auth0_id: str) -> Optional[User]:
-        """Get user by Auth0 ID."""
+    def find_by_auth0_id(self, auth0_id: str) -> Optional[User]:
+        """Find user by Auth0 ID."""
         try:
             response = self.supabase.client.table('users')\
                 .select('*')\
@@ -62,8 +62,8 @@ class UserRepository(UserRepositoryInterface):
             logger.error(f"Failed to get user by Auth0 ID {auth0_id}: {str(e)}")
             raise DatabaseError(f"Failed to retrieve user: {str(e)}")
     
-    def get_by_email(self, email: str) -> Optional[User]:
-        """Get user by email address."""
+    def find_by_email(self, email: str) -> Optional[User]:
+        """Find user by email address."""
         try:
             response = self.supabase.client.table('users')\
                 .select('*')\
@@ -78,6 +78,21 @@ class UserRepository(UserRepositoryInterface):
         except Exception as e:
             logger.error(f"Failed to get user by email {email}: {str(e)}")
             raise DatabaseError(f"Failed to retrieve user: {str(e)}")
+    
+    def save(self, user: User) -> User:
+        """Save (create or update) a user."""
+        try:
+            # Convert user model to dict
+            user_data = user.to_dict()
+            
+            # If user has an ID, update; otherwise create
+            if hasattr(user, 'id') and user.id:
+                return self.update(user.id, user_data)
+            else:
+                return self.create(user_data)
+        except Exception as e:
+            logger.error(f"Failed to save user: {str(e)}")
+            raise DatabaseError(f"User save failed: {str(e)}")
     
     def create(self, user_data: Dict[str, Any]) -> User:
         """Create a new user."""
@@ -148,7 +163,7 @@ class UserRepository(UserRepositoryInterface):
         """Get user profile."""
         try:
             # First get the auth0_id for this user
-            user = self.get_by_id(user_id)
+            user = self.find_by_id(user_id)
             if not user:
                 return None
             
@@ -189,7 +204,7 @@ class UserRepository(UserRepositoryInterface):
     def get_full_profile_by_auth0_id(self, auth0_id: str) -> Optional[Dict[str, Any]]:
         """Get complete user profile with joined data."""
         try:
-            return self.supabase.get_user_full_profile_by_auth0_id(auth0_id)
+            return self.supabase.get_user_full_profile(auth0_id)
             
         except Exception as e:
             logger.error(f"Failed to get full profile for Auth0 ID {auth0_id}: {str(e)}")

@@ -1,5 +1,5 @@
 """
-Communication repository implementation using Supabase.
+Partner repository implementation using Supabase.
 Handles communication partner and unit data access operations.
 """
 
@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
 
-from core.interfaces import CommunicationRepositoryInterface
+from domains.onboarding.repositories.interfaces import IPartnerRepository
 from core.exceptions import (
     ValidationError,
     ResourceNotFoundError,
@@ -26,9 +26,9 @@ from authentication.services.supabase_service import SupabaseService
 logger = logging.getLogger(__name__)
 
 
-class CommunicationRepository(CommunicationRepositoryInterface):
+class PartnerRepository(IPartnerRepository):
     """
-    Concrete implementation of CommunicationRepositoryInterface using Supabase.
+    Concrete implementation of IPartnerRepository using Supabase.
     Handles communication partner and unit data operations.
     """
     

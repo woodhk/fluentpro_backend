@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
 
-from core.interfaces import IndustryRepositoryInterface
+from domains.onboarding.repositories.interfaces import IIndustryRepository
 from core.exceptions import (
     ValidationError,
     ResourceNotFoundError,
@@ -18,9 +18,9 @@ from authentication.services.supabase_service import SupabaseService
 logger = logging.getLogger(__name__)
 
 
-class IndustryRepository(IndustryRepositoryInterface):
+class IndustryRepository(IIndustryRepository):
     """
-    Concrete implementation of IndustryRepositoryInterface using Supabase.
+    Concrete implementation of IIndustryRepository using Supabase.
     Provides CRUD operations for industries.
     """
     

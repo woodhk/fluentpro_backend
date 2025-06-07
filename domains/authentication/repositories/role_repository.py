@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
 
-from core.interfaces import RoleRepositoryInterface
+from domains.authentication.repositories.interfaces import IRoleRepository
 from core.exceptions import (
     ValidationError,
     ResourceNotFoundError,
@@ -20,9 +20,9 @@ from authentication.services.azure_search_service import AzureSearchService
 logger = logging.getLogger(__name__)
 
 
-class RoleRepository(RoleRepositoryInterface):
+class RoleRepository(IRoleRepository):
     """
-    Concrete implementation of RoleRepositoryInterface.
+    Concrete implementation of IRoleRepository.
     Uses Supabase for data storage and Azure Search for vector similarity.
     """
     
@@ -34,8 +34,8 @@ class RoleRepository(RoleRepositoryInterface):
         self.supabase = supabase_service or SupabaseService()
         self.search_service = search_service or AzureSearchService()
     
-    def get_by_id(self, role_id: str) -> Optional[Role]:
-        """Get role by ID."""
+    def find_by_id(self, role_id: str) -> Optional[Role]:
+        """Find role by ID."""
         try:
             response = self.supabase.client.table('roles')\
                 .select('*, industries(id, name)')\
