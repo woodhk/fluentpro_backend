@@ -4,11 +4,13 @@ Handles user profile operations and data management.
 """
 
 from rest_framework import status
+from datetime import timedelta
 import logging
 
 from core.view_base import AuthenticatedView, VersionedView, CachedView
 from core.responses import APIResponse
 from authentication.business.user_manager import UserManager
+from application.decorators import cache, audit_log
 
 logger = logging.getLogger(__name__)
 
@@ -20,17 +22,11 @@ class UserProfileView(CachedView, VersionedView):
     """
     cache_timeout = 600  # 10 minutes cache
     
+    @cache(key_prefix="user_profile", ttl=timedelta(minutes=15))
     def get(self, request):
         """Get current user profile."""
         try:
             auth0_id = self.get_auth0_user_id()
-            
-            # Check cache first
-            cache_key = self.get_cache_key("profile", auth0_id)
-            cached_profile = self.get_cached_response(cache_key)
-            
-            if cached_profile:
-                return APIResponse.success(data=cached_profile)
             
             # Get from database using business manager
             user_manager = UserManager()
@@ -62,9 +58,6 @@ class UserProfileView(CachedView, VersionedView):
                 'updated_at': user_profile.user.updated_at.isoformat() if user_profile.user.updated_at else None
             }
             
-            # Cache the response
-            self.set_cached_response(cache_key, profile_data)
-            
             return APIResponse.success(data=profile_data)
             
         except Exception as e:
@@ -75,6 +68,7 @@ class UserProfileView(CachedView, VersionedView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @audit_log(action="profile_update", resource_type="user")
     def patch(self, request):
         """Update user profile (partial update)."""
         try:
@@ -107,10 +101,6 @@ class UserProfileView(CachedView, VersionedView):
                     request.data['role_id']
                 )
                 response_data['role'] = result
-            
-            # Clear user cache after updates
-            cache_key = self.get_cache_key("profile", auth0_id)
-            self.delete(cache_key)
             
             return APIResponse.success(
                 data=response_data,
@@ -187,6 +177,7 @@ class UserDeactivateView(AuthenticatedView, VersionedView):
     Handles account deletion/deactivation.
     """
     
+    @audit_log(action="account_deactivation", resource_type="user")
     def post(self, request):
         """Deactivate user account."""
         try:
@@ -195,10 +186,6 @@ class UserDeactivateView(AuthenticatedView, VersionedView):
             
             # Deactivate user account
             user_manager.deactivate_user(auth0_id)
-            
-            # Clear all user cache
-            cache_key_prefix = f"user:{auth0_id}"
-            # Implementation depends on cache backend
             
             return APIResponse.success(
                 data={'message': 'Account deactivated successfully'}

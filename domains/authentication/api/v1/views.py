@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from datetime import timedelta
 import logging
 
 from api.common.base_views import BaseAPIView
@@ -17,6 +18,7 @@ from core.exceptions import ValidationError, AuthenticationError, ConflictError
 from domains.authentication.dto.requests import LoginRequest, SignupRequest, RefreshTokenRequest, LogoutRequest
 from domains.authentication.dto.responses import UserResponse, TokenResponse, AuthResponse
 from application.container import container
+from application.decorators import validate_input, audit_log, cache
 
 logger = logging.getLogger(__name__)
 
@@ -32,18 +34,11 @@ class SignUpView(BaseAPIView, PublicView, VersionedView):
         super().__init__(**kwargs)
         self.register_user = container.auth_use_cases.register_user()
     
-    async def post(self, request):
+    @validate_input(SignupRequest)
+    @audit_log(action="user_registration", resource_type="authentication")
+    async def post(self, request, **validated_data):
         """Handle user registration."""
-        # Parse request
-        try:
-            signup_request = SignupRequest(**request.data)
-        except Exception as e:
-            return Response(
-                {"errors": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Execute use case
+        signup_request = SignupRequest(**validated_data)
         return await self.handle_use_case(self.register_user, signup_request)
 
 
@@ -58,18 +53,11 @@ class LoginView(BaseAPIView, PublicView, VersionedView):
         super().__init__(**kwargs)
         self.authenticate_user = container.auth_use_cases.authenticate_user()
     
-    async def post(self, request):
+    @validate_input(LoginRequest)
+    @audit_log(action="user_login", resource_type="authentication")
+    async def post(self, request, **validated_data):
         """Handle user login."""
-        # Parse request
-        try:
-            login_request = LoginRequest(**request.data)
-        except Exception as e:
-            return Response(
-                {"errors": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Execute use case
+        login_request = LoginRequest(**validated_data)
         return await self.handle_use_case(self.authenticate_user, login_request)
 
 

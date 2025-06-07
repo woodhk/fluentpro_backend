@@ -5,6 +5,7 @@ Handles industry selection during onboarding.
 
 from rest_framework import status
 from rest_framework.response import Response
+from datetime import timedelta
 import logging
 
 from api.common.base_views import BaseAPIView
@@ -14,6 +15,7 @@ from core.exceptions import ValidationError
 from authentication.business.user_manager import UserManager
 from application.container import container
 from domains.onboarding.dto.requests import UserIndustryRequest
+from application.decorators import validate_input, audit_log, cache
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +30,11 @@ class SetIndustryView(BaseAPIView, AuthenticatedView, VersionedView):
         super().__init__(**kwargs)
         self.select_user_industry = container.onboarding_use_cases.select_user_industry()
     
-    def post(self, request):
+    @validate_input(UserIndustryRequest)
+    @audit_log(action="set_industry", resource_type="onboarding")
+    def post(self, request, **validated_data):
         """Set user's industry."""
-        # Parse request
-        try:
-            industry_request = UserIndustryRequest(**request.data)
-        except Exception as e:
-            return Response(
-                {"errors": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        industry_request = UserIndustryRequest(**validated_data)
         
         # Get user auth0_id
         try:

@@ -5,6 +5,7 @@ Handles native language selection during onboarding.
 
 from rest_framework import status
 from rest_framework.response import Response
+from datetime import timedelta
 import logging
 
 from api.common.base_views import BaseAPIView
@@ -15,6 +16,7 @@ from authentication.business.user_manager import UserManager
 from authentication.models.user import NativeLanguage
 from application.container import container
 from domains.onboarding.dto.requests import NativeLanguageRequest
+from application.decorators import validate_input, audit_log, cache
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +31,11 @@ class SetNativeLanguageView(BaseAPIView, AuthenticatedView, VersionedView):
         super().__init__(**kwargs)
         self.select_native_language = container.onboarding_use_cases.select_native_language()
     
-    def post(self, request):
+    @validate_input(NativeLanguageRequest)
+    @audit_log(action="set_native_language", resource_type="onboarding")
+    def post(self, request, **validated_data):
         """Set user's native language."""
-        # Parse request
-        try:
-            language_request = NativeLanguageRequest(**request.data)
-        except Exception as e:
-            return Response(
-                {"errors": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        language_request = NativeLanguageRequest(**validated_data)
         
         # Get user auth0_id
         try:
@@ -64,16 +61,10 @@ class GetAvailableLanguagesView(CachedView, VersionedView):
     """
     cache_timeout = 3600  # 1 hour cache (rarely changes)
     
+    @cache(key_prefix="available_languages", ttl=timedelta(hours=1))
     def get(self, request):
         """Get available native languages."""
         try:
-            # Check cache first
-            cache_key = self.get_cache_key("languages")
-            cached_languages = self.get_cached_response(cache_key)
-            
-            if cached_languages:
-                return APIResponse.success(data=cached_languages)
-            
             # Build language options from enum
             languages = []
             for lang in NativeLanguage:
@@ -83,9 +74,6 @@ class GetAvailableLanguagesView(CachedView, VersionedView):
                 })
             
             response_data = {'languages': languages}
-            
-            # Cache the response
-            self.set_cached_response(cache_key, response_data)
             
             return APIResponse.success(data=response_data)
             

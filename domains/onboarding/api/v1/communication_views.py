@@ -4,12 +4,14 @@ Handles communication partner and unit selection during onboarding.
 """
 
 from rest_framework import status
+from datetime import timedelta
 import logging
 
 from core.view_base import AuthenticatedView, VersionedView, CachedView
 from core.responses import APIResponse
 from core.exceptions import ValidationError
 from onboarding.business.communication_manager import CommunicationManager
+from application.decorators import cache
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +23,10 @@ class GetCommunicationPartnersView(CachedView, VersionedView):
     """
     cache_timeout = 1800  # 30 minutes cache
     
+    @cache(key_prefix="communication_partners", ttl=timedelta(minutes=30))
     def get(self, request):
         """Get available communication partners."""
         try:
-            # Check cache first
-            cache_key = self.get_cache_key("partners")
-            cached_partners = self.get_cached_response(cache_key)
-            
-            if cached_partners:
-                return APIResponse.success(data=cached_partners)
-            
             # Get partners using communication manager
             communication_manager = CommunicationManager()
             partners = communication_manager.get_available_partners()

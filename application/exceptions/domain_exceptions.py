@@ -15,3 +15,7 @@ class InvalidCredentialsError(DomainException):
 class BusinessRuleViolationError(DomainException):
     """Business rule violated"""
     status_code = 422
+
+class ValidationException(DomainException):
+    """Input validation error"""
+    status_code = 400
