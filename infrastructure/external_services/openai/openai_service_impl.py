@@ -8,10 +8,7 @@ from domains.onboarding.services.interfaces import IEmbeddingService, ICompletio
 from infrastructure.external_services.openai.client import IOpenAIClient
 from application.decorators.retry import retry
 from application.decorators.circuit_breaker import circuit_breaker
-from application.exceptions.infrastructure_exceptions import (
-    ExternalServiceException,
-    AIServiceException
-)
+from application.exceptions.infrastructure_exceptions import ExternalServiceException
 from typing import List
 import logging
 
@@ -43,17 +40,13 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             Embedding vector as list of floats
             
         Raises:
-            AIServiceException: If embedding creation fails
+            ExternalServiceException: If embedding creation fails
         """
         try:
             logger.debug(f"Creating embedding for text (length: {len(text)})")
             
             if not text.strip():
-                raise AIServiceException(
-                    "Cannot create embedding for empty text",
-                    model=self.embedding_model,
-                    operation="create_embedding"
-                )
+                raise ExternalServiceException("Cannot create embedding for empty text")
             
             response = await self.client.embeddings.create(
                 model=self.embedding_model,
@@ -61,11 +54,7 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             )
             
             if not response.data or len(response.data) == 0:
-                raise AIServiceException(
-                    "OpenAI returned no embedding data",
-                    model=self.embedding_model,
-                    operation="create_embedding"
-                )
+                raise ExternalServiceException("OpenAI returned no embedding data")
             
             embedding = response.data[0].embedding
             logger.debug(f"Successfully created embedding (dimension: {len(embedding)})")
@@ -74,16 +63,10 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             
         except Exception as e:
             logger.error(f"Embedding creation failed: {e}")
-            if isinstance(e, AIServiceException):
+            if isinstance(e, ExternalServiceException):
                 raise
             
-            raise AIServiceException(
-                f"Embedding creation failed: {str(e)}",
-                model=self.embedding_model,
-                operation="create_embedding",
-                original_exception=e,
-                context={"text_length": len(text)}
-            )
+            raise ExternalServiceException(f"Embedding creation failed: {str(e)}")
     
     @retry(max_attempts=3, backoff_seconds=2)
     @circuit_breaker(failure_threshold=5, recovery_timeout=60)
@@ -98,7 +81,7 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             List of embedding vectors
             
         Raises:
-            AIServiceException: If embedding creation fails
+            ExternalServiceException: If embedding creation fails
         """
         try:
             logger.debug(f"Creating embeddings for {len(texts)} texts")
@@ -109,11 +92,7 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             # Filter out empty texts
             non_empty_texts = [text.strip() for text in texts if text.strip()]
             if not non_empty_texts:
-                raise AIServiceException(
-                    "Cannot create embeddings for empty texts",
-                    model=self.embedding_model,
-                    operation="create_embeddings"
-                )
+                raise ExternalServiceException("Cannot create embeddings for empty texts")
             
             response = await self.client.embeddings.create(
                 model=self.embedding_model,
@@ -121,11 +100,9 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             )
             
             if not response.data or len(response.data) != len(non_empty_texts):
-                raise AIServiceException(
+                raise ExternalServiceException(
                     f"OpenAI returned {len(response.data) if response.data else 0} embeddings "
-                    f"for {len(non_empty_texts)} texts",
-                    model=self.embedding_model,
-                    operation="create_embeddings"
+                    f"for {len(non_empty_texts)} texts"
                 )
             
             embeddings = [item.embedding for item in response.data]
@@ -135,16 +112,10 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             
         except Exception as e:
             logger.error(f"Batch embedding creation failed: {e}")
-            if isinstance(e, AIServiceException):
+            if isinstance(e, ExternalServiceException):
                 raise
             
-            raise AIServiceException(
-                f"Batch embedding creation failed: {str(e)}",
-                model=self.embedding_model,
-                operation="create_embeddings",
-                original_exception=e,
-                context={"text_count": len(texts)}
-            )
+            raise ExternalServiceException(f"Batch embedding creation failed: {str(e)}")
     
     @retry(max_attempts=3, backoff_seconds=2)
     @circuit_breaker(failure_threshold=5, recovery_timeout=60)
@@ -160,17 +131,13 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             Generated completion text
             
         Raises:
-            AIServiceException: If completion fails
+            ExternalServiceException: If completion fails
         """
         try:
             logger.debug(f"Generating completion for prompt (length: {len(prompt)})")
             
             if not prompt.strip():
-                raise AIServiceException(
-                    "Cannot generate completion for empty prompt",
-                    model=self.completion_model,
-                    operation="complete"
-                )
+                raise ExternalServiceException("Cannot generate completion for empty prompt")
             
             response = await self.client.chat.completions.create(
                 model=self.completion_model,
@@ -180,35 +147,21 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             )
             
             if not response.choices or len(response.choices) == 0:
-                raise AIServiceException(
-                    "OpenAI returned no completion choices",
-                    model=self.completion_model,
-                    operation="complete"
-                )
+                raise ExternalServiceException("OpenAI returned no completion choices")
             
             content = response.choices[0].message.content
             if content is None:
-                raise AIServiceException(
-                    "OpenAI returned empty completion content",
-                    model=self.completion_model,
-                    operation="complete"
-                )
+                raise ExternalServiceException("OpenAI returned empty completion content")
             
             logger.debug(f"Successfully generated completion (length: {len(content)})")
             return content
             
         except Exception as e:
             logger.error(f"Completion failed: {e}")
-            if isinstance(e, AIServiceException):
+            if isinstance(e, ExternalServiceException):
                 raise
             
-            raise AIServiceException(
-                f"Completion failed: {str(e)}",
-                model=self.completion_model,
-                operation="complete",
-                original_exception=e,
-                context={"prompt_length": len(prompt), "max_tokens": max_tokens}
-            )
+            raise ExternalServiceException(f"Completion failed: {str(e)}")
     
     @retry(max_attempts=3, backoff_seconds=2)
     @circuit_breaker(failure_threshold=5, recovery_timeout=60)
@@ -225,17 +178,13 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             Generated completion text
             
         Raises:
-            AIServiceException: If completion fails
+            ExternalServiceException: If completion fails
         """
         try:
             logger.debug(f"Generating completion with system message (system: {len(system)}, user: {len(user)})")
             
             if not user.strip():
-                raise AIServiceException(
-                    "Cannot generate completion for empty user message",
-                    model=self.completion_model,
-                    operation="complete_with_system"
-                )
+                raise ExternalServiceException("Cannot generate completion for empty user message")
             
             messages = []
             if system.strip():
@@ -250,36 +199,18 @@ class OpenAIServiceImpl(IEmbeddingService, ICompletionService):
             )
             
             if not response.choices or len(response.choices) == 0:
-                raise AIServiceException(
-                    "OpenAI returned no completion choices",
-                    model=self.completion_model,
-                    operation="complete_with_system"
-                )
+                raise ExternalServiceException("OpenAI returned no completion choices")
             
             content = response.choices[0].message.content
             if content is None:
-                raise AIServiceException(
-                    "OpenAI returned empty completion content",
-                    model=self.completion_model,
-                    operation="complete_with_system"
-                )
+                raise ExternalServiceException("OpenAI returned empty completion content")
             
             logger.debug(f"Successfully generated completion with system message (length: {len(content)})")
             return content
             
         except Exception as e:
             logger.error(f"Completion with system message failed: {e}")
-            if isinstance(e, AIServiceException):
+            if isinstance(e, ExternalServiceException):
                 raise
             
-            raise AIServiceException(
-                f"Completion with system message failed: {str(e)}",
-                model=self.completion_model,
-                operation="complete_with_system",
-                original_exception=e,
-                context={
-                    "system_length": len(system),
-                    "user_length": len(user),
-                    "max_tokens": max_tokens
-                }
-            )
+            raise ExternalServiceException(f"Completion with system message failed: {str(e)}")

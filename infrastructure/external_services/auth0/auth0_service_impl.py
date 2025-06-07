@@ -8,10 +8,7 @@ from domains.authentication.services.interfaces import IAuthenticationService
 from infrastructure.external_services.auth0.client import IAuth0Client
 from application.decorators.retry import retry
 from application.decorators.circuit_breaker import circuit_breaker
-from application.exceptions.infrastructure_exceptions import (
-    InfrastructureException,
-    AuthenticationServiceException
-)
+from application.exceptions.infrastructure_exceptions import ExternalServiceException
 from typing import Optional, Dict, Any
 import logging
 
@@ -43,7 +40,7 @@ class Auth0ServiceImpl(IAuthenticationService):
             Auth0 user ID
             
         Raises:
-            AuthenticationServiceException: If user creation fails
+            ExternalServiceException: If user creation fails
         """
         try:
             logger.info(f"Creating Auth0 user for email: {email}")
@@ -57,26 +54,17 @@ class Auth0ServiceImpl(IAuthenticationService):
             
             user_id = response.get('user_id')
             if not user_id:
-                raise AuthenticationServiceException(
-                    "Auth0 did not return user_id",
-                    operation="create_user",
-                    context={"email": email}
-                )
+                raise ExternalServiceException("Auth0 did not return user_id")
             
             logger.info(f"Successfully created Auth0 user: {user_id}")
             return user_id
             
         except Exception as e:
             logger.error(f"Failed to create Auth0 user for {email}: {e}")
-            if isinstance(e, AuthenticationServiceException):
+            if isinstance(e, ExternalServiceException):
                 raise
             
-            raise AuthenticationServiceException(
-                f"Authentication service error: {str(e)}",
-                operation="create_user",
-                original_exception=e,
-                context={"email": email, "metadata_keys": list(metadata.keys())}
-            )
+            raise ExternalServiceException(f"Authentication service error: {str(e)}")
     
     @retry(max_attempts=2, backoff_seconds=0.5)
     @circuit_breaker(failure_threshold=10, recovery_timeout=30)
@@ -126,7 +114,7 @@ class Auth0ServiceImpl(IAuthenticationService):
             True if revocation successful
             
         Raises:
-            AuthenticationServiceException: If token revocation fails
+            ExternalServiceException: If token revocation fails
         """
         try:
             logger.info("Revoking Auth0 token")
@@ -142,8 +130,4 @@ class Auth0ServiceImpl(IAuthenticationService):
             
         except Exception as e:
             logger.error(f"Failed to revoke token: {e}")
-            raise AuthenticationServiceException(
-                f"Token revocation failed: {str(e)}",
-                operation="revoke_token",
-                original_exception=e
-            )
+            raise ExternalServiceException(f"Token revocation failed: {str(e)}")
