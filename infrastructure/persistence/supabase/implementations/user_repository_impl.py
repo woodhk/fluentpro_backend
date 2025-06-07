@@ -10,6 +10,7 @@ import logging
 from domains.authentication.repositories.interfaces import IUserRepository
 from domains.authentication.models.user import User, UserProfile, OnboardingStatus
 from domains.shared.repositories.base_repository import BaseRepository
+from infrastructure.persistence.supabase.client import ISupabaseClient
 from core.exceptions import (
     ValidationError,
     ResourceNotFoundError,
@@ -25,7 +26,7 @@ class UserRepositoryImpl(BaseRepository[User, str], IUserRepository):
     Provides CRUD operations for users and user profiles.
     """
     
-    def __init__(self, supabase_client):
+    def __init__(self, supabase_client: ISupabaseClient):
         super().__init__('users')
         self.client = supabase_client
     

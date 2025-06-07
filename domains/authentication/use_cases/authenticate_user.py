@@ -13,7 +13,7 @@ from core.exceptions import (
     BusinessLogicError
 )
 from domains.authentication.services.interfaces import IAuthService
-from core.interfaces import UserRepositoryInterface
+from domains.authentication.repositories.interfaces import IUserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class AuthenticateUser:
     def __init__(
         self,
         auth_service: IAuthService,
-        user_repository: UserRepositoryInterface
+        user_repository: IUserRepository
     ):
         """
         Initialize with injected dependencies.
@@ -41,7 +41,7 @@ class AuthenticateUser:
         self.auth_service = auth_service
         self.user_repository = user_repository
     
-    def execute(self, email: str, password: str) -> Dict[str, Any]:
+    async def execute(self, email: str, password: str) -> Dict[str, Any]:
         """
         Execute user authentication.
         
@@ -66,7 +66,7 @@ class AuthenticateUser:
                 raise AuthenticationError("Invalid email or password")
             
             # Verify user exists in our system
-            user = self.user_repository.get_by_email(email)
+            user = await self.user_repository.find_by_email(email)
             if not user:
                 logger.warning(f"User {email} authenticated but not found in our system")
                 raise SupabaseUserNotFoundError(email)

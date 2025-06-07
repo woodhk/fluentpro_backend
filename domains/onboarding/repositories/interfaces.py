@@ -7,35 +7,28 @@ from abc import abstractmethod
 from typing import Optional, List, Dict, Any
 
 from core.patterns.repository import IRepository
-from onboarding.models.communication import (
-    CommunicationPartner,
-    Unit,
-    UserCommunicationPartnerSelection,
-    UserUnitSelection,
-    UserCommunicationNeed
-)
 
 
-class IPartnerRepository(IRepository[CommunicationPartner, str]):
+class IPartnerRepository(IRepository[Dict[str, Any], str]):
     """Interface for communication partner repository operations"""
     
     @abstractmethod
-    async def get_partners(self) -> List[CommunicationPartner]:
+    async def get_partners(self) -> List[Dict[str, Any]]:
         """Get all active communication partners"""
         pass
     
     @abstractmethod
-    async def get_units(self) -> List[Unit]:
+    async def get_units(self) -> List[Dict[str, Any]]:
         """Get all active communication units"""
         pass
     
     @abstractmethod
-    async def get_user_partners(self, user_id: str) -> List[UserCommunicationPartnerSelection]:
+    async def get_user_partners(self, user_id: str) -> List[Dict[str, Any]]:
         """Get user's selected partners"""
         pass
     
     @abstractmethod
-    async def get_user_units(self, user_id: str, partner_id: str) -> List[UserUnitSelection]:
+    async def get_user_units(self, user_id: str, partner_id: str) -> List[Dict[str, Any]]:
         """Get user's selected units for a partner"""
         pass
     
@@ -45,7 +38,7 @@ class IPartnerRepository(IRepository[CommunicationPartner, str]):
         user_id: str, 
         partner_ids: List[str],
         custom_partners: Optional[List[str]] = None
-    ) -> List[UserCommunicationPartnerSelection]:
+    ) -> List[Dict[str, Any]]:
         """Save user's partner selections"""
         pass
     
@@ -56,12 +49,12 @@ class IPartnerRepository(IRepository[CommunicationPartner, str]):
         partner_id: str,
         unit_ids: List[str],
         custom_units: Optional[List[str]] = None
-    ) -> List[UserUnitSelection]:
+    ) -> List[Dict[str, Any]]:
         """Save user's unit selections for a partner"""
         pass
     
     @abstractmethod
-    async def get_user_communication_needs(self, user_id: str) -> UserCommunicationNeed:
+    async def get_user_communication_needs(self, user_id: str) -> Dict[str, Any]:
         """Get complete communication needs for a user"""
         pass
     

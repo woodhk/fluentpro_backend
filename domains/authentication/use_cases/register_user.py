@@ -14,8 +14,9 @@ from core.exceptions import (
     BusinessLogicError
 )
 from authentication.models.auth import UserRegistration
+from authentication.models.user import User
 from domains.authentication.services.interfaces import IAuthService
-from core.interfaces import UserRepositoryInterface
+from domains.authentication.repositories.interfaces import IUserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class RegisterUser:
     def __init__(
         self,
         auth_service: IAuthService,
-        user_repository: UserRepositoryInterface
+        user_repository: IUserRepository
     ):
         """
         Initialize with injected dependencies.
@@ -43,7 +44,7 @@ class RegisterUser:
         self.auth_service = auth_service
         self.user_repository = user_repository
     
-    def execute(self, registration_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, registration_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute user registration.
         
@@ -71,7 +72,7 @@ class RegisterUser:
                 raise ValidationError("Registration validation failed", details=validation_errors)
             
             # Check if user already exists in our system
-            existing_user = self.user_repository.get_by_email(registration.email)
+            existing_user = await self.user_repository.find_by_email(registration.email)
             if existing_user:
                 raise ConflictError(f"User with email '{registration.email}' already exists")
             
@@ -90,15 +91,15 @@ class RegisterUser:
                 raise Auth0Error(f"Failed to create user: {str(e)}")
             
             # Create user in our database
-            user_data = {
-                'full_name': registration.full_name,
-                'email': registration.email,
-                'date_of_birth': registration.date_of_birth,
-                'auth0_id': auth_user_id,
-                'is_active': True
-            }
+            user = User(
+                full_name=registration.full_name,
+                email=registration.email,
+                date_of_birth=registration.date_of_birth,
+                auth0_id=auth_user_id,
+                is_active=True
+            )
             
-            supabase_user = self.user_repository.create(user_data)
+            supabase_user = await self.user_repository.save(user)
             
             # Authenticate the user to get tokens
             auth_response = self.auth_service.authenticate(registration.email, registration.password)

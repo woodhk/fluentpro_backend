@@ -8,8 +8,8 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 from core.patterns.repository import IRepository
-from authentication.models.user import User, UserProfile, OnboardingStatus
-from authentication.models.role import Role, RoleMatch, HierarchyLevel
+from domains.authentication.models.user import User, UserProfile, OnboardingStatus
+from domains.authentication.models.role import Role, RoleMatch, HierarchyLevel
 
 
 class IUserRepository(IRepository[User, str]):

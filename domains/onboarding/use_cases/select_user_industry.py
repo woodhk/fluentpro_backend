@@ -12,7 +12,8 @@ from core.exceptions import (
     SupabaseUserNotFoundError,
     BusinessLogicError
 )
-from core.interfaces import UserRepositoryInterface, IndustryRepositoryInterface
+from domains.authentication.repositories.interfaces import IUserRepository
+from domains.onboarding.repositories.interfaces import IIndustryRepository
 from domains.onboarding.services.interfaces import IProfileSetupService
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,8 @@ class SelectUserIndustry:
     
     def __init__(
         self,
-        user_repository: UserRepositoryInterface,
-        industry_repository: IndustryRepositoryInterface
+        user_repository: IUserRepository,
+        industry_repository: IIndustryRepository
     ):
         """
         Initialize with injected dependencies.

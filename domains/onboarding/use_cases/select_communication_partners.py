@@ -14,7 +14,7 @@ from core.exceptions import (
     BusinessLogicError
 )
 from onboarding.models.communication import UserCommunicationPartnerSelection
-from infrastructure.persistence.supabase.client import ISupabaseClient
+from domains.onboarding.repositories.interfaces import IPartnerRepository
 from domains.onboarding.services.interfaces import IProfileSetupService
 
 logger = logging.getLogger(__name__)
@@ -30,17 +30,17 @@ class SelectCommunicationPartners:
     
     def __init__(
         self,
-        database_client: ISupabaseClient,
+        partner_repository: IPartnerRepository,
         profile_service: IProfileSetupService
     ):
         """
         Initialize with injected dependencies.
         
         Args:
-            database_client: Supabase client for data operations
+            partner_repository: Repository for partner data operations
             profile_service: Profile setup service for business logic
         """
-        self.database_client = database_client
+        self.partner_repository = partner_repository
         self.profile_service = profile_service
         
         # Mapping from frontend slug identifiers to partner names

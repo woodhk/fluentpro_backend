@@ -12,7 +12,7 @@ from core.exceptions import (
     SupabaseUserNotFoundError,
     BusinessLogicError
 )
-from core.interfaces import UserRepositoryInterface
+from domains.authentication.repositories.interfaces import IUserRepository
 from authentication.models.user import NativeLanguage
 from domains.onboarding.services.interfaces import IProfileSetupService
 
@@ -29,7 +29,7 @@ class SelectNativeLanguage:
     
     def __init__(
         self,
-        user_repository: UserRepositoryInterface
+        user_repository: IUserRepository
     ):
         """
         Initialize with injected dependencies.

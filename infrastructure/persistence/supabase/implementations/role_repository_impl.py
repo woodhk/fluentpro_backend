@@ -10,6 +10,7 @@ import logging
 from domains.authentication.repositories.interfaces import IRoleRepository
 from domains.authentication.models.role import Role, RoleMatch, HierarchyLevel
 from domains.shared.repositories.base_repository import BaseRepository
+from infrastructure.persistence.supabase.client import ISupabaseClient
 from core.exceptions import (
     ValidationError,
     ResourceNotFoundError,
@@ -25,7 +26,7 @@ class RoleRepositoryImpl(BaseRepository[Role, str], IRoleRepository):
     Uses Supabase for data storage and search service for vector similarity.
     """
     
-    def __init__(self, supabase_client, search_service=None):
+    def __init__(self, supabase_client: ISupabaseClient, search_service=None):
         super().__init__('roles')
         self.client = supabase_client
         self.search_service = search_service

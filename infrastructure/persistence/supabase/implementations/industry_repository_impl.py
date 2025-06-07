@@ -10,6 +10,7 @@ import logging
 from domains.onboarding.repositories.interfaces import IIndustryRepository
 from domains.authentication.models.role import Industry
 from domains.shared.repositories.base_repository import BaseRepository
+from infrastructure.persistence.supabase.client import ISupabaseClient
 from core.exceptions import (
     ValidationError,
     ResourceNotFoundError,
@@ -25,7 +26,7 @@ class IndustryRepositoryImpl(BaseRepository[Dict[str, Any], str], IIndustryRepos
     Works with industry data as dictionaries per interface specification.
     """
     
-    def __init__(self, supabase_client):
+    def __init__(self, supabase_client: ISupabaseClient):
         super().__init__('industries')
         self.client = supabase_client
     

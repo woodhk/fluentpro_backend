@@ -16,6 +16,7 @@ from domains.onboarding.models.communication_partner import (
     UserCommunicationNeed
 )
 from domains.shared.repositories.base_repository import BaseRepository
+from infrastructure.persistence.supabase.client import ISupabaseClient
 from core.exceptions import (
     ValidationError,
     ResourceNotFoundError,
@@ -31,7 +32,7 @@ class PartnerRepositoryImpl(BaseRepository[CommunicationPartner, str], IPartnerR
     Handles communication partner and unit operations.
     """
     
-    def __init__(self, supabase_client):
+    def __init__(self, supabase_client: ISupabaseClient):
         super().__init__('communication_partners')
         self.client = supabase_client
     
