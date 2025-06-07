@@ -7,12 +7,15 @@ Handles new user registration with Auth0 and Supabase.
 from typing import Dict, Any
 import logging
 
+from core.patterns.use_case import UseCase
 from core.exceptions import (
     ValidationError,
     ConflictError,
     Auth0Error,
     BusinessLogicError
 )
+from domains.authentication.dto.requests import SignupRequest
+from domains.authentication.dto.responses import AuthResponse, TokenResponse, UserResponse
 from authentication.models.auth import UserRegistration
 from authentication.models.user import User
 from domains.authentication.services.interfaces import IAuthService
@@ -21,7 +24,7 @@ from domains.authentication.repositories.interfaces import IUserRepository
 logger = logging.getLogger(__name__)
 
 
-class RegisterUser:
+class RegisterUserUseCase(UseCase[SignupRequest, AuthResponse]):
     """
     Use case for registering new users.
     
@@ -44,19 +47,15 @@ class RegisterUser:
         self.auth_service = auth_service
         self.user_repository = user_repository
     
-    async def execute(self, registration_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, request: SignupRequest) -> AuthResponse:
         """
         Execute user registration.
         
         Args:
-            registration_data: User registration information
-                - email: User's email address
-                - password: User's password
-                - full_name: User's full name
-                - date_of_birth: User's date of birth (optional)
+            request: SignupRequest containing registration information
                 
         Returns:
-            Dictionary with user data and tokens
+            AuthResponse with user data and tokens
             
         Raises:
             ValidationError: If registration data is invalid
@@ -65,25 +64,18 @@ class RegisterUser:
             BusinessLogicError: If registration process fails
         """
         try:
-            # Validate registration data
-            registration = UserRegistration(**registration_data)
-            validation_errors = registration.validate()
-            if validation_errors:
-                raise ValidationError("Registration validation failed", details=validation_errors)
-            
             # Check if user already exists in our system
-            existing_user = await self.user_repository.find_by_email(registration.email)
+            existing_user = await self.user_repository.find_by_email(request.email)
             if existing_user:
-                raise ConflictError(f"User with email '{registration.email}' already exists")
+                raise ConflictError(f"User with email '{request.email}' already exists")
             
             # Create user via auth service
             try:
                 auth_user_id = self.auth_service.create_user(
-                    registration.email,
-                    registration.password,
+                    request.email,
+                    request.password,
                     metadata={
-                        'full_name': registration.full_name,
-                        'date_of_birth': registration.date_of_birth.isoformat() if registration.date_of_birth else None
+                        'full_name': request.full_name
                     }
                 )
             except Exception as e:
@@ -92,9 +84,8 @@ class RegisterUser:
             
             # Create user in our database
             user = User(
-                full_name=registration.full_name,
-                email=registration.email,
-                date_of_birth=registration.date_of_birth,
+                full_name=request.full_name,
+                email=request.email,
                 auth0_id=auth_user_id,
                 is_active=True
             )
@@ -102,13 +93,27 @@ class RegisterUser:
             supabase_user = await self.user_repository.save(user)
             
             # Authenticate the user to get tokens
-            auth_response = self.auth_service.authenticate(registration.email, registration.password)
+            auth_response = self.auth_service.authenticate(request.email, request.password)
             
-            return {
-                'user': supabase_user.to_dict(),
-                'tokens': auth_response,
-                'onboarding_required': True
-            }
+            # Create response DTOs
+            user_response = UserResponse(
+                id=str(supabase_user.id),
+                email=supabase_user.email,
+                full_name=supabase_user.full_name,
+                created_at=supabase_user.created_at,
+                updated_at=supabase_user.updated_at,
+                is_active=supabase_user.is_active,
+                onboarding_status="pending",
+                roles=["user"]
+            )
+            
+            token_response = TokenResponse(
+                access_token=auth_response.get("access_token", ""),
+                refresh_token=auth_response.get("refresh_token", ""),
+                expires_in=auth_response.get("expires_in", 3600)
+            )
+            
+            return AuthResponse(user=user_response, tokens=token_response)
             
         except (ConflictError, Auth0Error, ValidationError):
             raise

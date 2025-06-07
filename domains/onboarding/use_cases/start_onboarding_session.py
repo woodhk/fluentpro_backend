@@ -5,11 +5,15 @@ Handles initialization of the onboarding process for users.
 """
 
 import logging
+from datetime import datetime, timedelta
 
+from core.patterns.use_case import UseCase
 from core.exceptions import (
     SupabaseUserNotFoundError,
     BusinessLogicError
 )
+from domains.onboarding.dto.requests import StartOnboardingRequest
+from domains.onboarding.dto.responses import OnboardingSessionResponse, OnboardingStep, OnboardingSessionStatus
 from onboarding.models.onboarding import OnboardingFlow
 from domains.authentication.repositories.interfaces import IUserRepository
 from domains.onboarding.services.interfaces import IOnboardingService
@@ -17,7 +21,7 @@ from domains.onboarding.services.interfaces import IOnboardingService
 logger = logging.getLogger(__name__)
 
 
-class StartOnboardingSession:
+class StartOnboardingSessionUseCase(UseCase[StartOnboardingRequest, OnboardingSessionResponse]):
     """
     Use case for starting an onboarding session.
     
@@ -37,15 +41,15 @@ class StartOnboardingSession:
         """
         self.user_repository = user_repository
     
-    async def execute(self, user_id: str) -> OnboardingFlow:
+    async def execute(self, request: StartOnboardingRequest) -> OnboardingSessionResponse:
         """
         Execute onboarding session startup.
         
         Args:
-            user_id: User ID to start onboarding for
+            request: StartOnboardingRequest containing user_id
             
         Returns:
-            OnboardingFlow instance with current progress
+            OnboardingSessionResponse with session details
             
         Raises:
             SupabaseUserNotFoundError: If user not found
@@ -53,9 +57,9 @@ class StartOnboardingSession:
         """
         try:
             # Get user profile to determine current onboarding status
-            user_profile = await self.user_repository.get_profile(user_id)
+            user_profile = await self.user_repository.get_profile(request.user_id)
             if not user_profile:
-                raise SupabaseUserNotFoundError(user_id)
+                raise SupabaseUserNotFoundError(request.user_id)
             
             # Convert profile to dict format for compatibility with existing code
             user_data = {
@@ -72,14 +76,37 @@ class StartOnboardingSession:
             
             # Create onboarding flow
             flow = OnboardingFlow(
-                user_id=user_id,
+                user_id=request.user_id,
                 current_phase=current_phase
             )
             
             # Update step statuses based on user progress
             self._update_flow_from_user_data(flow, user_data)
             
-            return flow
+            # Map to current step
+            current_step = self._map_phase_to_step(current_phase)
+            
+            # Generate session ID
+            session_id = f"session-{request.user_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            
+            # Create progress mapping
+            progress = {
+                "language_selection": user_data.get('native_language') is not None,
+                "industry_selection": user_data.get('industry_id') is not None,
+                "role_selection": user_data.get('selected_role_id') is not None,
+                "partner_selection": False,  # TODO: Check communication partners
+                "situation_configuration": False  # TODO: Check situation configuration
+            }
+            
+            return OnboardingSessionResponse(
+                session_id=session_id,
+                user_id=request.user_id,
+                current_step=current_step,
+                status=OnboardingSessionStatus.ACTIVE,
+                started_at=datetime.now(),
+                expires_at=datetime.now() + timedelta(hours=1),
+                progress=progress
+            )
             
         except SupabaseUserNotFoundError:
             raise
@@ -117,3 +144,18 @@ class StartOnboardingSession:
             flow.complete_step('role_selection', {'role_id': user_data['selected_role_id']})
             # Job input is implied if role is selected
             flow.complete_step('job_input', {'completed_via_role_selection': True})
+    
+    def _map_phase_to_step(self, phase) -> OnboardingStep:
+        """Map onboarding phase to step enum."""
+        from onboarding.models.onboarding import OnboardingPhase
+        
+        phase_to_step = {
+            OnboardingPhase.NOT_STARTED: OnboardingStep.LANGUAGE_SELECTION,
+            OnboardingPhase.BASIC_INFO: OnboardingStep.LANGUAGE_SELECTION,
+            OnboardingPhase.INDUSTRY_SELECTION: OnboardingStep.INDUSTRY_SELECTION,
+            OnboardingPhase.ROLE_SELECTION: OnboardingStep.ROLE_SELECTION,
+            OnboardingPhase.COMMUNICATION_NEEDS: OnboardingStep.PARTNER_SELECTION,
+            OnboardingPhase.COMPLETED: OnboardingStep.COMPLETION
+        }
+        
+        return phase_to_step.get(phase, OnboardingStep.LANGUAGE_SELECTION)

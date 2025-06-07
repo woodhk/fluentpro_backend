@@ -6,11 +6,15 @@ Handles completion of the entire onboarding process and summary generation.
 
 from typing import Dict, Any
 import logging
+from datetime import datetime
 
+from core.patterns.use_case import UseCase
 from core.exceptions import (
     SupabaseUserNotFoundError,
     BusinessLogicError
 )
+from domains.onboarding.dto.requests import CompleteOnboardingRequest
+from domains.onboarding.dto.responses import OnboardingSummaryResponse
 from domains.authentication.repositories.interfaces import IUserRepository
 from domains.onboarding.repositories.interfaces import IPartnerRepository
 from authentication.models.user import OnboardingStatus
@@ -19,7 +23,7 @@ from domains.onboarding.services.interfaces import IOnboardingService
 logger = logging.getLogger(__name__)
 
 
-class CompleteOnboardingFlow:
+class CompleteOnboardingFlowUseCase(UseCase[CompleteOnboardingRequest, OnboardingSummaryResponse]):
     """
     Use case for completing the onboarding flow.
     
@@ -45,21 +49,24 @@ class CompleteOnboardingFlow:
         self.partner_repository = partner_repository
         self.onboarding_service = onboarding_service
     
-    async def execute(self, user_id: str) -> Dict[str, Any]:
+    async def execute(self, request: CompleteOnboardingRequest) -> OnboardingSummaryResponse:
         """
         Execute onboarding flow completion.
         
         Args:
-            user_id: User ID to complete onboarding for
+            request: CompleteOnboardingRequest containing session_id
             
         Returns:
-            Dictionary with comprehensive onboarding summary
+            OnboardingSummaryResponse with completion summary
             
         Raises:
             SupabaseUserNotFoundError: If user not found
             BusinessLogicError: If completion fails
         """
         try:
+            # Extract user ID from session (simplified for now - in real implementation, would look up session)
+            user_id = request.session_id.split('-')[1] if '-' in request.session_id else request.session_id
+            
             # Get user profile with all onboarding data
             user_profile = await self.user_repository.get_profile(user_id)
             if not user_profile:
@@ -80,13 +87,10 @@ class CompleteOnboardingFlow:
             # Get communication needs
             try:
                 communication_needs = await self.partner_repository.get_user_communication_needs(user_id)
-                comm_data = {
-                    'user_id': user_id,
-                    'partners': communication_needs.get('partners', [])
-                }
+                partners = communication_needs.get('partners', [])
             except Exception as e:
                 logger.warning(f"Failed to get communication needs: {str(e)}")
-                comm_data = {'user_id': user_id, 'summary': {}, 'partners': [], 'units': []}
+                partners = []
             
             # Update onboarding status to completed
             user = await self.user_repository.find_by_id(user_id)
@@ -94,27 +98,39 @@ class CompleteOnboardingFlow:
                 user.complete_onboarding()
                 await self.user_repository.save(user)
             
-            return {
-                'success': True,
-                'user_profile': {
-                    'name': user_profile_data.get('full_name'),
-                    'email': user_profile_data.get('email'),
-                    'native_language': user_profile_data.get('native_language'),
-                    'industry': user_profile_data.get('industries', {}).get('name') if user_profile_data.get('industries') else None,
-                    'role': user_profile_data.get('roles', {}).get('title') if user_profile_data.get('roles') else None,
-                    'onboarding_status': 'completed'
-                },
-                'communication_needs': comm_data,
-                'completion_summary': {
-                    'basic_info_completed': user_profile_data.get('native_language') is not None,
-                    'industry_selected': user_profile_data.get('industry_id') is not None,
-                    'role_defined': user_profile_data.get('selected_role_id') is not None,
-                    'communication_needs_defined': len(comm_data.get('partners', [])) > 0,
-                    'ready_for_learning': True
-                },
-                'next_actions': ['Start your personalized learning journey'],
-                'message': 'Onboarding completed successfully! You are now ready to begin your personalized English communication training.'
+            # Create profile summary
+            profile_summary = {
+                'native_language': user_profile_data.get('native_language'),
+                'proficiency_level': 'intermediate',  # Default or from user data
+                'industry': user_profile_data.get('industries', {}).get('name') if user_profile_data.get('industries') else None,
+                'role': user_profile_data.get('roles', {}).get('title') if user_profile_data.get('roles') else None,
+                'communication_partners': [p.get('name', '') for p in partners],
+                'total_situations': len(partners) * 5  # Estimated
             }
+            
+            # Generate recommendations
+            recommendations = [
+                "Start with basic professional vocabulary",
+                "Practice common workplace scenarios"
+            ]
+            
+            if profile_summary.get('role'):
+                recommendations.append(f"Focus on {profile_summary['role']}-specific communication")
+            
+            # Generate next steps
+            next_steps = [
+                "Complete your first lesson",
+                "Set up daily practice reminders",
+                "Explore the course library"
+            ]
+            
+            return OnboardingSummaryResponse(
+                user_id=user_id,
+                completed_at=datetime.now(),
+                profile_summary=profile_summary,
+                recommendations=recommendations,
+                next_steps=next_steps
+            )
             
         except SupabaseUserNotFoundError:
             raise

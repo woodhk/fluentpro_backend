@@ -8,11 +8,14 @@ from typing import List, Optional
 from datetime import datetime
 import logging
 
+from core.patterns.use_case import UseCase
 from core.exceptions import (
     ValidationError,
     SupabaseUserNotFoundError,
     BusinessLogicError
 )
+from domains.onboarding.dto.requests import SelectCommunicationPartnersRequest
+from domains.onboarding.dto.responses import OnboardingStepResponse, OnboardingStep
 from onboarding.models.communication import UserCommunicationPartnerSelection
 from domains.onboarding.repositories.interfaces import IPartnerRepository
 from domains.authentication.repositories.interfaces import IUserRepository
@@ -21,7 +24,7 @@ from domains.onboarding.services.interfaces import IProfileSetupService
 logger = logging.getLogger(__name__)
 
 
-class SelectCommunicationPartners:
+class SelectCommunicationPartnersUseCase(UseCase[SelectCommunicationPartnersRequest, OnboardingStepResponse]):
     """
     Use case for selecting communication partners.
     
