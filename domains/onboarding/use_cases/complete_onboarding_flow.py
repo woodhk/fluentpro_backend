@@ -11,7 +11,8 @@ from core.exceptions import (
     SupabaseUserNotFoundError,
     BusinessLogicError
 )
-from infrastructure.persistence.supabase.client import ISupabaseClient
+from domains.authentication.repositories.interfaces import IUserRepository
+from domains.onboarding.repositories.interfaces import IPartnerRepository
 from authentication.models.user import OnboardingStatus
 from domains.onboarding.services.interfaces import IOnboardingService
 
@@ -28,20 +29,23 @@ class CompleteOnboardingFlow:
     
     def __init__(
         self,
-        database_client: ISupabaseClient,
+        user_repository: IUserRepository,
+        partner_repository: IPartnerRepository,
         onboarding_service: IOnboardingService
     ):
         """
         Initialize with injected dependencies.
         
         Args:
-            database_client: Supabase client for data operations
+            user_repository: Repository for user data operations
+            partner_repository: Repository for partner data operations
             onboarding_service: Onboarding service for business logic
         """
-        self.database_client = database_client
+        self.user_repository = user_repository
+        self.partner_repository = partner_repository
         self.onboarding_service = onboarding_service
     
-    def execute(self, user_id: str) -> Dict[str, Any]:
+    async def execute(self, user_id: str) -> Dict[str, Any]:
         """
         Execute onboarding flow completion.
         
@@ -57,44 +61,38 @@ class CompleteOnboardingFlow:
         """
         try:
             # Get user profile with all onboarding data
-            user_profile_response = self.database_client.table('users')\
-                .select('*, industries(name), roles(title)')\
-                .eq('id', user_id)\
-                .execute()
-            
-            if not user_profile_response.data:
+            user_profile = await self.user_repository.get_profile(user_id)
+            if not user_profile:
                 raise SupabaseUserNotFoundError(user_id)
-                
-            user_profile_data = user_profile_response.data[0]
+            
+            # Convert to dict format for compatibility
+            user_profile_data = {
+                'full_name': user_profile.full_name,
+                'email': user_profile.email,
+                'native_language': user_profile.native_language.value if user_profile.native_language else None,
+                'industry_id': user_profile.industry_id,
+                'selected_role_id': user_profile.selected_role_id,
+                'industries': {'name': user_profile.industry_name} if user_profile.industry_name else None,
+                'roles': {'title': user_profile.role_title} if user_profile.role_title else None
+            }
             
             
             # Get communication needs
             try:
-                partners_response = self.database_client.table('user_communication_partners')\
-                    .select('*, communication_partners(name)')\
-                    .eq('user_id', user_id)\
-                    .execute()
-                
+                communication_needs = await self.partner_repository.get_user_communication_needs(user_id)
                 comm_data = {
                     'user_id': user_id,
-                    'partners': [p['communication_partners']['name'] for p in partners_response.data]
+                    'partners': communication_needs.get('partners', [])
                 }
             except Exception as e:
                 logger.warning(f"Failed to get communication needs: {str(e)}")
                 comm_data = {'user_id': user_id, 'summary': {}, 'partners': [], 'units': []}
             
             # Update onboarding status to completed
-            self.database_client.table('users')\
-                .update({'onboarding_status': OnboardingStatus.COMPLETED.value})\
-                .eq('id', user_id)\
-                .execute()
-            
-            # Update session phase to completed
-            self.database_client.table('user_sessions')\
-                .update({'phase': 'completed'})\
-                .eq('user_id', user_id)\
-                .eq('is_active', True)\
-                .execute()
+            user = await self.user_repository.find_by_id(user_id)
+            if user:
+                user.complete_onboarding()
+                await self.user_repository.save(user)
             
             return {
                 'success': True,

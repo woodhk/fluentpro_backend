@@ -11,7 +11,7 @@ from core.exceptions import (
     BusinessLogicError
 )
 from onboarding.models.onboarding import OnboardingFlow
-from infrastructure.persistence.supabase.client import ISupabaseClient
+from domains.authentication.repositories.interfaces import IUserRepository
 from domains.onboarding.services.interfaces import IOnboardingService
 
 logger = logging.getLogger(__name__)
@@ -27,17 +27,17 @@ class StartOnboardingSession:
     
     def __init__(
         self,
-        database_client: ISupabaseClient
+        user_repository: IUserRepository
     ):
         """
         Initialize with injected dependencies.
         
         Args:
-            database_client: Supabase client for data operations
+            user_repository: Repository for user data operations
         """
-        self.database_client = database_client
+        self.user_repository = user_repository
     
-    def execute(self, user_id: str) -> OnboardingFlow:
+    async def execute(self, user_id: str) -> OnboardingFlow:
         """
         Execute onboarding session startup.
         
@@ -53,15 +53,19 @@ class StartOnboardingSession:
         """
         try:
             # Get user profile to determine current onboarding status
-            user_response = self.database_client.table('users')\
-                .select('id, auth0_id, onboarding_status, native_language, industry_id, selected_role_id')\
-                .eq('id', user_id)\
-                .execute()
-            
-            if not user_response.data:
+            user_profile = await self.user_repository.get_profile(user_id)
+            if not user_profile:
                 raise SupabaseUserNotFoundError(user_id)
             
-            user_data = user_response.data[0]
+            # Convert profile to dict format for compatibility with existing code
+            user_data = {
+                'id': user_profile.user_id,
+                'auth0_id': user_profile.auth0_id,
+                'onboarding_status': user_profile.onboarding_status.value if user_profile.onboarding_status else 'not_started',
+                'native_language': user_profile.native_language.value if user_profile.native_language else None,
+                'industry_id': user_profile.industry_id,
+                'selected_role_id': user_profile.selected_role_id
+            }
             
             # Determine current phase based on user data
             current_phase = self._determine_current_phase(user_data)

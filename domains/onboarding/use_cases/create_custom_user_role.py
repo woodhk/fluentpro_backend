@@ -11,7 +11,8 @@ from core.exceptions import (
     BusinessLogicError
 )
 from authentication.models.role import JobDescription, Role
-from infrastructure.persistence.supabase.client import ISupabaseClient
+from domains.authentication.repositories.interfaces import IRoleRepository
+from domains.onboarding.repositories.interfaces import IIndustryRepository
 from infrastructure.external_services.azure.client import IAzureCognitiveSearchClient
 from infrastructure.external_services.openai.client import IOpenAIClient
 
@@ -28,7 +29,8 @@ class CreateCustomUserRole:
     
     def __init__(
         self,
-        database_client: ISupabaseClient,
+        role_repository: IRoleRepository,
+        industry_repository: IIndustryRepository,
         search_client: IAzureCognitiveSearchClient,
         ai_client: IOpenAIClient
     ):
@@ -36,15 +38,17 @@ class CreateCustomUserRole:
         Initialize with injected dependencies.
         
         Args:
-            database_client: Supabase client for data persistence
+            role_repository: Repository for role data operations
+            industry_repository: Repository for industry data operations
             search_client: Azure Search client for indexing
             ai_client: OpenAI client for AI enhancements
         """
-        self.database_client = database_client
+        self.role_repository = role_repository
+        self.industry_repository = industry_repository
         self.search_client = search_client
         self.ai_client = ai_client
     
-    def execute(
+    async def execute(
         self,
         job_description: JobDescription,
         industry_id: str,
@@ -93,49 +97,40 @@ class CreateCustomUserRole:
                     f"{job_description.title} {job_description.description}"
                 )
             
-            # Create role in database
-            role_data = {
-                'title': job_description.title,
-                'description': rewritten_description,
-                'industry_id': industry_id,
-                'search_keywords': ','.join(generated_keywords) if isinstance(generated_keywords, list) else generated_keywords,
-                'hierarchy_level': job_description.hierarchy_level.value,
-                'is_active': True,
-                'created_by': created_by_user_id
-            }
+            # Create role using repository
+            role = Role(
+                title=job_description.title,
+                description=rewritten_description,
+                industry_id=industry_id,
+                search_keywords=','.join(generated_keywords) if isinstance(generated_keywords, list) else generated_keywords,
+                hierarchy_level=job_description.hierarchy_level,
+                is_active=True,
+                created_by=created_by_user_id
+            )
             
             try:
-                role_response = self.database_client.table('roles').insert(role_data).execute()
-                if not role_response.data:
+                created_role = await self.role_repository.save(role)
+                if not created_role:
                     raise BusinessLogicError("Failed to create role in database")
-                new_role_id = role_response.data[0]['id']
             except Exception as e:
                 logger.error(f"Database role creation failed: {str(e)}")
                 raise BusinessLogicError(f"Failed to create role: {str(e)}")
             
-            # Get the complete role data with industry information
-            role_with_industry_response = self.database_client.table('roles')\
-                .select('*, industries(name)')\
-                .eq('id', new_role_id)\
-                .execute()
-            
-            if not role_with_industry_response.data:
-                raise BusinessLogicError("Failed to retrieve created role")
-            
-            role_with_industry = role_with_industry_response.data[0]
-            
-            # Create Role instance
-            role = Role.from_supabase_data(role_with_industry)
+            role = created_role
             
             # Add role to Azure Search index (non-blocking)
             try:
+                # Get industry name for search indexing
+                industry = await self.industry_repository.find_by_id(industry_id)
+                industry_name = industry.get('name', '') if industry else ''
+                
                 search_doc = {
-                    'id': role_with_industry['id'],
-                    'title': role_with_industry['title'],
-                    'description': role_with_industry['description'],
-                    'industry_name': role_with_industry.get('industries', {}).get('name', ''),
-                    'search_keywords': role_with_industry.get('search_keywords', ''),
-                    'hierarchy_level': role_with_industry.get('hierarchy_level', 'associate')
+                    'id': role.id,
+                    'title': role.title,
+                    'description': role.description,
+                    'industry_name': industry_name,
+                    'search_keywords': role.search_keywords,
+                    'hierarchy_level': role.hierarchy_level.value
                 }
                 
                 search_result = self.search_client.upload_documents('roles', [search_doc])
