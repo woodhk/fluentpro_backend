@@ -10,250 +10,36 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 
-class IAuthService(ABC):
-    """
-    Authentication service interface for user authentication operations.
-    
-    Handles login, logout, token management, and user creation.
-    """
+class IAuthenticationService(ABC):
+    """External authentication service interface"""
     
     @abstractmethod
-    def authenticate(self, email: str, password: str) -> Dict[str, Any]:
-        """
-        Authenticate a user with email and password.
-        
-        Args:
-            email: User's email address
-            password: User's password
-            
-        Returns:
-            Dict containing:
-                - access_token: JWT access token
-                - refresh_token: Refresh token for getting new access tokens
-                - expires_in: Token expiration time in seconds
-                - user_id: Authenticated user's ID
-                
-        Raises:
-            AuthenticationError: If credentials are invalid
-        """
+    async def create_user(self, email: str, password: str, metadata: Dict[str, Any]) -> str:
+        """Create user in external auth system, return auth_id"""
         pass
     
     @abstractmethod
-    def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
-        """
-        Refresh an access token using a refresh token.
-        
-        Args:
-            refresh_token: Valid refresh token
-            
-        Returns:
-            Dict containing:
-                - access_token: New JWT access token
-                - expires_in: Token expiration time in seconds
-                
-        Raises:
-            TokenError: If refresh token is invalid or expired
-        """
+    async def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Verify JWT token and return claims"""
         pass
     
     @abstractmethod
-    def logout(self, refresh_token: str) -> bool:
-        """
-        Logout user and revoke tokens.
-        
-        Args:
-            refresh_token: Refresh token to revoke
-            
-        Returns:
-            True if logout successful
-            
-        Raises:
-            TokenError: If token revocation fails
-        """
-        pass
-    
-    @abstractmethod
-    def create_user(self, email: str, password: str, metadata: Optional[Dict[str, Any]] = None) -> str:
-        """
-        Create a new user account.
-        
-        Args:
-            email: User's email address
-            password: User's password
-            metadata: Optional user metadata
-            
-        Returns:
-            Created user's ID
-            
-        Raises:
-            UserCreationError: If user creation fails
-            DuplicateUserError: If email already exists
-        """
-        pass
-    
-    @abstractmethod
-    def get_user_info(self, access_token: str) -> Dict[str, Any]:
-        """
-        Get user information from access token.
-        
-        Args:
-            access_token: Valid JWT access token
-            
-        Returns:
-            Dict containing user information
-            
-        Raises:
-            TokenError: If token is invalid
-        """
-        pass
-    
-    @abstractmethod
-    def update_user_metadata(self, user_id: str, metadata: Dict[str, Any]) -> bool:
-        """
-        Update user metadata.
-        
-        Args:
-            user_id: User's ID
-            metadata: Metadata to update
-            
-        Returns:
-            True if update successful
-            
-        Raises:
-            UserNotFoundError: If user doesn't exist
-        """
-        pass
-    
-    @abstractmethod
-    def verify_email(self, user_id: str) -> bool:
-        """
-        Send email verification.
-        
-        Args:
-            user_id: User's ID
-            
-        Returns:
-            True if verification email sent
-        """
-        pass
-    
-    @abstractmethod
-    def reset_password(self, email: str) -> bool:
-        """
-        Initiate password reset process.
-        
-        Args:
-            email: User's email address
-            
-        Returns:
-            True if reset email sent
-        """
+    async def revoke_token(self, token: str) -> bool:
+        """Revoke a token"""
         pass
 
 
 class ITokenService(ABC):
-    """
-    Token management service interface.
-    
-    Handles token generation, validation, and storage.
-    """
+    """JWT token generation service"""
     
     @abstractmethod
-    def generate_access_token(self, user_id: str, claims: Optional[Dict[str, Any]] = None) -> str:
-        """
-        Generate a new access token.
-        
-        Args:
-            user_id: User's ID
-            claims: Optional additional claims to include
-            
-        Returns:
-            JWT access token
-        """
+    async def create_access_token(self, user_id: str, claims: Dict[str, Any]) -> str:
+        """Create access token"""
         pass
     
     @abstractmethod
-    def generate_refresh_token(self, user_id: str) -> str:
-        """
-        Generate a new refresh token.
-        
-        Args:
-            user_id: User's ID
-            
-        Returns:
-            Refresh token
-        """
-        pass
-    
-    @abstractmethod
-    def validate_access_token(self, token: str) -> Dict[str, Any]:
-        """
-        Validate an access token and extract claims.
-        
-        Args:
-            token: JWT access token
-            
-        Returns:
-            Token claims
-            
-        Raises:
-            TokenError: If token is invalid or expired
-        """
-        pass
-    
-    @abstractmethod
-    def validate_refresh_token(self, token: str) -> Dict[str, Any]:
-        """
-        Validate a refresh token.
-        
-        Args:
-            token: Refresh token
-            
-        Returns:
-            Token metadata
-            
-        Raises:
-            TokenError: If token is invalid or expired
-        """
-        pass
-    
-    @abstractmethod
-    def revoke_token(self, token: str) -> bool:
-        """
-        Revoke a token.
-        
-        Args:
-            token: Token to revoke
-            
-        Returns:
-            True if revocation successful
-        """
-        pass
-    
-    @abstractmethod
-    def is_token_revoked(self, token: str) -> bool:
-        """
-        Check if a token has been revoked.
-        
-        Args:
-            token: Token to check
-            
-        Returns:
-            True if token is revoked
-        """
-        pass
-    
-    @abstractmethod
-    def get_token_expiry(self, token: str) -> datetime:
-        """
-        Get token expiration time.
-        
-        Args:
-            token: Token to check
-            
-        Returns:
-            Expiration datetime
-        """
+    async def create_refresh_token(self, user_id: str) -> str:
+        """Create refresh token"""
         pass
 
 

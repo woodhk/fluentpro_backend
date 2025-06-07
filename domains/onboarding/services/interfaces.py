@@ -350,3 +350,31 @@ class IProfileSetupService(ABC):
                 - completion_percentage: Profile completion percentage
         """
         pass
+
+
+class IEmbeddingService(ABC):
+    """Text embedding service for semantic search"""
+    
+    @abstractmethod
+    async def create_embedding(self, text: str) -> List[float]:
+        """Create embedding vector for text"""
+        pass
+    
+    @abstractmethod
+    async def create_embeddings(self, texts: List[str]) -> List[List[float]]:
+        """Create embeddings for multiple texts"""
+        pass
+
+
+class ICompletionService(ABC):
+    """LLM completion service"""
+    
+    @abstractmethod
+    async def complete(self, prompt: str, max_tokens: int = 100) -> str:
+        """Generate completion for prompt"""
+        pass
+    
+    @abstractmethod
+    async def complete_with_system(self, system: str, user: str, max_tokens: int = 100) -> str:
+        """Generate completion with system message"""
+        pass
