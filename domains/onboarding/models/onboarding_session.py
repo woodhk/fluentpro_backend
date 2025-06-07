@@ -82,9 +82,9 @@ class OnboardingStep:
 
 
 @dataclass
-class OnboardingFlow:
+class OnboardingSession:
     """
-    Complete onboarding flow for a user.
+    Complete onboarding session for a user.
     """
     user_id: str
     current_phase: OnboardingPhase = OnboardingPhase.NOT_STARTED
