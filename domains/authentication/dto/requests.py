@@ -56,6 +56,18 @@ class RefreshTokenRequest(BaseModel):
         }
 
 
+class LogoutRequest(BaseModel):
+    """DTO for logout requests."""
+    refresh_token: str = Field(..., description="JWT refresh token to revoke")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            }
+        }
+
+
 class ChangePasswordRequest(BaseModel):
     """DTO for password change requests."""
     current_password: str = Field(..., min_length=1, description="Current password")

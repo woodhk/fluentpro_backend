@@ -12,11 +12,10 @@ import logging
 from core.view_base import CSRFExemptView, PublicView, VersionedView
 from core.responses import APIResponse
 from core.exceptions import ValidationError, AuthenticationError, ConflictError
-from authentication.serializers import (
-    SignUpSerializer, LoginSerializer, RefreshTokenSerializer, 
-    LogoutSerializer, Auth0CallbackSerializer
-)
-from authentication.business.user_manager import UserManager
+from domains.authentication.dto.requests import LoginRequest, SignupRequest, RefreshTokenRequest, LogoutRequest
+from domains.authentication.dto.responses import UserResponse, TokenResponse, AuthResponse
+from domains.authentication.use_cases.authenticate_user import AuthenticateUser
+from domains.authentication.use_cases.register_user import RegisterUser
 
 logger = logging.getLogger(__name__)
 
@@ -30,66 +29,30 @@ class SignUpView(PublicView, VersionedView):
     
     def post(self, request):
         """Handle user registration."""
-        serializer = SignUpSerializer(data=request.data)
-        
-        if not serializer.is_valid():
+        try:
+            signup_request = SignupRequest(**request.data)
+        except Exception as e:
             return APIResponse.error(
                 message="Validation failed",
-                details=serializer.errors,
+                details=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
-            # Extract validated data
-            user_data = {
-                'email': serializer.validated_data['email'],
-                'password': serializer.validated_data['password'],
-                'full_name': serializer.validated_data['full_name'],
-                'date_of_birth': serializer.validated_data['date_of_birth'].isoformat()
-            }
+            # Use RegisterUser use case
+            register_use_case = RegisterUser(
+                auth_service=self.services.auth,
+                user_repository=self.services.user_repository
+            )
             
-            # Use business manager for user creation
-            user_manager = UserManager()
-            
-            # Check if user already exists
-            existing_user = user_manager.get_user_by_email(user_data['email'])
-            if existing_user:
-                raise ConflictError(f"User with email '{user_data['email']}' already exists")
-            
-            # Create user through auth service and internal database
-            auth_service = self.services.auth
-            
-            # Create user in Auth0
-            auth0_user = auth_service.create_user(user_data)
-            
-            # Prepare data for internal database (exclude password)
-            internal_user_data = {
-                'email': user_data['email'],
-                'full_name': user_data['full_name'],
-                'date_of_birth': user_data['date_of_birth'],
-                'auth0_id': auth0_user['user_id'],
-                'is_active': True
-            }
-            
-            # Create user in internal database
-            internal_user = user_manager.create_user(internal_user_data)
-            
-            # Authenticate the user to get tokens
-            token_info = auth_service.authenticate(user_data['email'], user_data['password'])
+            result = register_use_case.execute(
+                email=signup_request.email,
+                password=signup_request.password,
+                full_name=signup_request.full_name
+            )
             
             return APIResponse.success(
-                data={
-                    'access_token': token_info.access_token,
-                    'refresh_token': token_info.refresh_token,
-                    'token_type': token_info.token_type,
-                    'expires_in': token_info.expires_in,
-                    'user': {
-                        'id': internal_user.id,
-                        'full_name': internal_user.full_name,
-                        'email': internal_user.email,
-                        'date_of_birth': str(internal_user.date_of_birth)
-                    }
-                },
+                data=result,
                 status_code=status.HTTP_201_CREATED
             )
             
@@ -113,48 +76,28 @@ class LoginView(PublicView, VersionedView):
     
     def post(self, request):
         """Handle user login."""
-        serializer = LoginSerializer(data=request.data)
-        
-        if not serializer.is_valid():
+        try:
+            login_request = LoginRequest(**request.data)
+        except Exception as e:
             return APIResponse.error(
                 message="Validation failed",
-                details=serializer.errors,
+                details=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
-            email = serializer.validated_data['email']
-            password = serializer.validated_data['password']
-            
-            # Authenticate with Auth0
-            auth_service = self.services.auth
-            token_info = auth_service.authenticate(email, password)
-            
-            # Get user from internal database
-            user_manager = UserManager()
-            user = user_manager.get_user_by_email(email)
-            
-            if not user:
-                return APIResponse.error(
-                    message="User not found",
-                    details="User does not exist in our system",
-                    status_code=status.HTTP_404_NOT_FOUND
-                )
-            
-            return APIResponse.success(
-                data={
-                    'access_token': token_info.access_token,
-                    'refresh_token': token_info.refresh_token,
-                    'token_type': token_info.token_type,
-                    'expires_in': token_info.expires_in,
-                    'user': {
-                        'id': user.id,
-                        'full_name': user.full_name,
-                        'email': user.email,
-                        'date_of_birth': str(user.date_of_birth)
-                    }
-                }
+            # Use AuthenticateUser use case
+            auth_use_case = AuthenticateUser(
+                auth_service=self.services.auth,
+                user_repository=self.services.user_repository
             )
+            
+            result = auth_use_case.execute(
+                email=login_request.email,
+                password=login_request.password
+            )
+            
+            return APIResponse.success(data=result)
             
         except AuthenticationError as e:
             if 'invalid_grant' in str(e).lower() or 'invalid credentials' in str(e).lower():
@@ -182,21 +125,19 @@ class RefreshTokenView(PublicView, VersionedView):
     
     def post(self, request):
         """Handle token refresh."""
-        serializer = RefreshTokenSerializer(data=request.data)
-        
-        if not serializer.is_valid():
+        try:
+            refresh_request = RefreshTokenRequest(**request.data)
+        except Exception as e:
             return APIResponse.error(
                 message="Validation failed",
-                details=serializer.errors,
+                details=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
-            refresh_token = serializer.validated_data['refresh_token']
-            
             # Refresh token with Auth0
             auth_service = self.services.auth
-            token_info = auth_service.refresh_token(refresh_token)
+            token_info = auth_service.refresh_token(refresh_request.refresh_token)
             
             return APIResponse.success(
                 data={
@@ -225,21 +166,19 @@ class LogoutView(CSRFExemptView, VersionedView):
     
     def post(self, request):
         """Handle user logout."""
-        serializer = LogoutSerializer(data=request.data)
-        
-        if not serializer.is_valid():
+        try:
+            logout_request = LogoutRequest(**request.data)
+        except Exception as e:
             return APIResponse.error(
                 message="Validation failed",
-                details=serializer.errors,
+                details=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST
             )
         
         try:
-            refresh_token = serializer.validated_data['refresh_token']
-            
             # Revoke refresh token
             auth_service = self.services.auth
-            success = auth_service.logout_user(refresh_token)
+            success = auth_service.logout_user(logout_request.refresh_token)
             
             if success:
                 return APIResponse.success(
