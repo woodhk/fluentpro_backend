@@ -1,0 +1,357 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # Code quality and security checks
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality & Security
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements/*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/development.txt
+        
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+        
+    - name: Check code formatting with black
+      run: |
+        black --check --diff .
+        
+    - name: Sort imports with isort
+      run: |
+        isort --check-only --diff .
+        
+    - name: Type checking with mypy
+      run: |
+        mypy . --ignore-missing-imports --no-strict-optional
+        
+    - name: Security check with bandit
+      run: |
+        bandit -r . -x tests/ -f json -o bandit-report.json || true
+        
+    - name: Upload bandit results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: bandit-results
+        path: bandit-report.json
+
+  # Dependency vulnerability scanning
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Security Scan
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install safety
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety
+        
+    - name: Check dependencies for vulnerabilities
+      run: |
+        safety check -r requirements/production.txt --json --output safety-report.json || true
+        
+    - name: Upload safety results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: safety-results
+        path: safety-report.json
+
+  # Unit and integration tests
+  test:
+    runs-on: ubuntu-latest
+    name: Tests
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_fluentpro
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    strategy:
+      matrix:
+        test-group: [unit, integration, e2e]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements/*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/testing.txt
+        
+    - name: Set up test environment
+      run: |
+        cp .env.example .env || echo "No .env.example found"
+        export DJANGO_SETTINGS_MODULE=config.settings.testing
+        export DATABASE_URL=postgres://postgres:postgres@localhost:5432/test_fluentpro
+        export REDIS_URL=redis://localhost:6379/15
+        
+    - name: Run database migrations
+      run: |
+        export DJANGO_SETTINGS_MODULE=config.settings.testing
+        export DATABASE_URL=postgres://postgres:postgres@localhost:5432/test_fluentpro
+        export REDIS_URL=redis://localhost:6379/15
+        python manage.py migrate --noinput
+        
+    - name: Run tests with coverage
+      run: |
+        export DJANGO_SETTINGS_MODULE=config.settings.testing
+        export DATABASE_URL=postgres://postgres:postgres@localhost:5432/test_fluentpro
+        export REDIS_URL=redis://localhost:6379/15
+        
+        if [ "${{ matrix.test-group }}" = "unit" ]; then
+          coverage run -m pytest tests/unit/ -v --tb=short --junitxml=test-results-unit.xml
+        elif [ "${{ matrix.test-group }}" = "integration" ]; then
+          coverage run -m pytest tests/integration/ -v --tb=short --junitxml=test-results-integration.xml
+        elif [ "${{ matrix.test-group }}" = "e2e" ]; then
+          coverage run -m pytest tests/e2e/ -v --tb=short --junitxml=test-results-e2e.xml
+        fi
+        
+    - name: Generate coverage report
+      run: |
+        coverage report
+        coverage xml -o coverage-${{ matrix.test-group }}.xml
+        coverage html -d htmlcov-${{ matrix.test-group }}
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.test-group }}
+        path: |
+          test-results-*.xml
+          coverage-*.xml
+          htmlcov-*/
+          
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: coverage-${{ matrix.test-group }}.xml
+        flags: ${{ matrix.test-group }}
+        name: codecov-${{ matrix.test-group }}
+
+  # Docker build and security scan
+  docker:
+    runs-on: ubuntu-latest
+    name: Docker Build & Security
+    needs: [code-quality, test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+          
+    - name: Build production Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        tags: fluentpro:latest
+        build-args: |
+          REQUIREMENTS_FILE=requirements/production.txt
+          BUILD_ENV=production
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        
+    - name: Build development Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile.dev
+        push: false
+        tags: fluentpro:dev
+        build-args: |
+          REQUIREMENTS_FILE=requirements/development.txt
+          BUILD_ENV=development
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: fluentpro:latest
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+    - name: Test container startup
+      run: |
+        # Test production container
+        docker run --name test-prod -d \
+          -e DJANGO_SETTINGS_MODULE=config.settings.production \
+          -e SECRET_KEY=test-secret-key-for-ci-build-only \
+          -e SKIP_SETTINGS_VALIDATION=true \
+          -e SERVICE_TYPE=web \
+          fluentpro:latest
+        
+        # Wait for container to start
+        sleep 10
+        
+        # Check if container is running
+        docker ps | grep test-prod
+        
+        # Clean up
+        docker stop test-prod
+        docker rm test-prod
+        
+    - name: Move cache
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  # Performance and load testing
+  performance:
+    runs-on: ubuntu-latest
+    name: Performance Tests
+    needs: [docker]
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'performance-test')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Compose
+      run: |
+        docker-compose -f docker/docker-compose.yml up -d
+        sleep 30  # Wait for services to start
+        
+    - name: Install Artillery
+      run: |
+        npm install -g artillery
+        
+    - name: Run load tests
+      run: |
+        # Create a simple Artillery config
+        cat > artillery-config.yml << EOF
+        config:
+          target: 'http://localhost:8000'
+          phases:
+            - duration: 60
+              arrivalRate: 5
+        scenarios:
+          - name: "Health check"
+            requests:
+              - get:
+                  url: "/api/health/"
+        EOF
+        
+        artillery run artillery-config.yml
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        docker-compose -f docker/docker-compose.yml down
+
+  # Build summary
+  build-summary:
+    runs-on: ubuntu-latest
+    name: Build Summary
+    needs: [code-quality, dependency-check, test, docker]
+    if: always()
+    
+    steps:
+    - name: Check build status
+      run: |
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "Dependency Check: ${{ needs.dependency-check.result }}"
+        echo "Tests: ${{ needs.test.result }}"
+        echo "Docker: ${{ needs.docker.result }}"
+        
+        if [ "${{ needs.code-quality.result }}" != "success" ] || \
+           [ "${{ needs.test.result }}" != "success" ] || \
+           [ "${{ needs.docker.result }}" != "success" ]; then
+          echo "❌ Build failed"
+          exit 1
+        else
+          echo "✅ Build successful"
+        fi

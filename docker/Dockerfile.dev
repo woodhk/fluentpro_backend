@@ -1,0 +1,84 @@
+# Development Dockerfile for FluentPro Backend
+# Optimized for development workflow with hot reloading and debugging
+
+FROM python:3.11-slim
+
+# Set build arguments
+ARG REQUIREMENTS_FILE=requirements/development.txt
+ARG BUILD_ENV=development
+
+# Set environment variables for development
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONIOENCODING=utf-8
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV DJANGO_SETTINGS_MODULE=config.settings.development
+ENV DEBUG=True
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies for development
+RUN apt-get update && apt-get install -y \
+    # Build dependencies
+    gcc \
+    libpq-dev \
+    # Development tools
+    curl \
+    wget \
+    git \
+    vim \
+    netcat-traditional \
+    # Debugging tools
+    procps \
+    htop \
+    # Frontend development (if needed)
+    nodejs \
+    npm \
+    # Cleanup
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install development tools
+RUN pip install --no-cache-dir --upgrade pip wheel
+
+# Copy requirements files first for better Docker layer caching
+COPY requirements/ requirements/
+
+# Install Python dependencies including development tools
+RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE} \
+    # Additional development dependencies
+    && pip install --no-cache-dir \
+        ipdb \
+        django-extensions \
+        django-debug-toolbar \
+        pytest-django \
+        pytest-xdist \
+        coverage
+
+# Create app user (but we'll use root in development for easier debugging)
+RUN groupadd -r app && useradd -r -g app app
+
+# Create necessary directories
+RUN mkdir -p /app/staticfiles /app/mediafiles /app/logs /app/celerybeat
+
+# Copy project files
+COPY . .
+
+# Set permissions
+RUN chown -R app:app /app
+
+# Development health check (simpler than production)
+HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=2 \
+    CMD curl -f http://localhost:8000/api/health/ || exit 1
+
+# Expose ports for Django and debugging
+EXPOSE 8000 5555 8080
+
+# Create development entrypoint script
+COPY docker/entrypoint.dev.sh /entrypoint.dev.sh
+RUN chmod +x /entrypoint.dev.sh
+
+# Default command for development (Django runserver with auto-reload)
+CMD ["/entrypoint.dev.sh"]
