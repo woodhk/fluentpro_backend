@@ -35,19 +35,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - No Django Channels dependency
 
 
-  **Step 3: Implement base consumer classes with authentication**
-  
-  **Actions:**
-  1. Create BaseConsumer with Auth0 JWT authentication
-  2. Add connection lifecycle management
-  3. Implement error handling and logging
-  
-  **Files to create:**
-  - `api/websocket/consumers/base_consumer.py` (authenticated base consumer)
-  - `api/websocket/authentication.py` (WebSocket JWT auth)
-  
-  **Verification:** WebSocket connections authenticate properly with JWT tokens
-
   **Step 4: Add connection management infrastructure**
   
   **Actions:**
