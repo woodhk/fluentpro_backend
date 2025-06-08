@@ -35,20 +35,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - No Django Channels dependency
 
 
-  **Step 2: Create WebSocket app structure**
-  
-  **Actions:**
-  1. Create api/websocket/ directory structure
-  2. Add WebSocket routing configuration
-  3. Create base consumer structure
-  
-  **Files to create:**
-  - `api/websocket/__init__.py`
-  - `api/websocket/routing.py` (WebSocket URL routing)
-  - `api/websocket/consumers/__init__.py`
-  
-  **Verification:** WebSocket routing is properly configured
-
   **Step 3: Implement base consumer classes with authentication**
   
   **Actions:**
