@@ -17,6 +17,16 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# Configure structured logging
+from infrastructure.monitoring.logging_config import configure_structlog
+
+# Initialize structured logging
+configure_structlog(
+    log_level=config('LOG_LEVEL', default='INFO'),
+    development_mode=config('DEBUG', default=True, cast=bool),
+    json_format=config('JSON_LOGS', default=True, cast=bool)
+)
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
