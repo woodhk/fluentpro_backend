@@ -1,123 +1,57 @@
-"""
-Authentication DTO mappers.
-These mappers handle conversion between domain models and DTOs.
-"""
+from core.patterns.mapper import Mapper
+from domains.authentication.models.user import User
+from domains.authentication.dto.responses import UserResponse
+from typing import List
 
-from typing import List, Optional
-from datetime import datetime
-
-from domains.authentication.models.user import User, UserProfile
-from domains.authentication.models.role import Role
-from domains.authentication.dto.responses import (
-    UserResponse,
-    UserProfileResponse,
-    RoleResponse,
-    TokenResponse,
-    AuthResponse,
-    OnboardingStatus as DTOOnboardingStatus,
-    UserRole
-)
-
-
-class UserMapper:
-    """Mapper for User model to DTOs."""
+class UserMapper(Mapper[User, UserResponse]):
+    """Maps between User model and UserResponse DTO"""
     
-    @staticmethod
-    def to_response(user: User) -> UserResponse:
-        """Convert User model to UserResponse DTO."""
+    def to_dto(self, model: User) -> UserResponse:
         return UserResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            created_at=user.created_at,
-            updated_at=user.updated_at,
-            is_active=user.is_active,
-            onboarding_status=DTOOnboardingStatus(user.onboarding_status.value),
-            roles=[UserRole.USER]  # Default role, can be extended based on business logic
+            id=model.id,
+            email=model.email,
+            full_name=model.full_name,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+            is_active=model.is_active,
+            is_verified=self._get_is_verified(model),
+            profile_completion=self._calculate_profile_completion(model),
+            roles=self._get_user_roles(model)
         )
     
-    @staticmethod
-    def to_profile_response(user: User, profile: Optional[UserProfile] = None) -> UserProfileResponse:
-        """Convert User model and UserProfile to UserProfileResponse DTO."""
-        response_data = {
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "created_at": user.created_at,
-            "updated_at": user.updated_at,
-            "is_active": user.is_active,
-            "onboarding_status": DTOOnboardingStatus(user.onboarding_status.value),
-            "roles": [UserRole.USER]  # Default role
-        }
-        
-        # Add profile data if available
-        if profile:
-            response_data.update({
-                "bio": profile.bio,
-                "avatar_url": profile.avatar_url,
-                "native_language": profile.native_language,
-                "learning_language": profile.learning_language,
-                "proficiency_level": profile.proficiency_level,
-                "selected_industry": profile.industry_name if hasattr(profile, 'industry_name') else None,
-                "selected_role": profile.role_title if hasattr(profile, 'role_title') else None
-            })
-        
-        return UserProfileResponse(**response_data)
-    
-    @staticmethod
-    def from_signup_request(signup_data: dict) -> dict:
-        """Convert signup request data to user creation data."""
-        return {
-            "email": signup_data["email"],
-            "full_name": signup_data["full_name"],
-            "password": signup_data["password"],  # This should be hashed in the service layer
-            "is_active": True,
-            "onboarding_status": "pending",
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        }
-
-
-class RoleMapper:
-    """Mapper for Role model to DTOs."""
-    
-    @staticmethod
-    def to_response(role: Role) -> RoleResponse:
-        """Convert Role model to RoleResponse DTO."""
-        return RoleResponse(
-            id=role.id,
-            title=role.title,
-            description=role.description,
-            hierarchy_level=role.hierarchy_level.value,
-            industry_id=role.industry_id,
-            industry_name=role.industry.name if role.industry else None,
-            is_custom=role.is_custom,
-            created_at=role.created_at
+    def to_model(self, dto: UserResponse) -> User:
+        # Note: Not all fields can be mapped back
+        user = User(
+            email=dto.email,
+            full_name=dto.full_name,
+            date_of_birth=None,  # Required field but not in DTO
+            auth0_id=None  # Required field but not in DTO
         )
+        user.id = dto.id
+        user.is_active = dto.is_active
+        return user
     
-    @staticmethod
-    def to_response_list(roles: List[Role]) -> List[RoleResponse]:
-        """Convert list of Role models to list of RoleResponse DTOs."""
-        return [RoleMapper.to_response(role) for role in roles]
+    def _calculate_profile_completion(self, user: User) -> int:
+        """Calculate profile completion percentage"""
+        fields = [
+            user.email,
+            user.full_name,
+            self._get_is_verified(user),
+            getattr(user, 'profile_picture', None),
+            getattr(user, 'bio', None)
+        ]
+        completed = sum(1 for field in fields if field)
+        return int((completed / len(fields)) * 100)
+    
+    def _get_user_roles(self, user: User) -> List[str]:
+        """Get user role names"""
+        # Assuming user has a roles relationship
+        return [role.name for role in user.roles.all()] if hasattr(user, 'roles') else []
+    
+    def _get_is_verified(self, user: User) -> bool:
+        """Get user verification status"""
+        # Since User model doesn't have is_verified, we'll use a reasonable default
+        return getattr(user, 'is_verified', False)
 
-
-class TokenMapper:
-    """Mapper for token-related data."""
-    
-    @staticmethod
-    def to_token_response(access_token: str, refresh_token: str, expires_in: int = 3600) -> TokenResponse:
-        """Create TokenResponse DTO from token data."""
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="Bearer",
-            expires_in=expires_in
-        )
-    
-    @staticmethod
-    def to_auth_response(user: User, access_token: str, refresh_token: str, expires_in: int = 3600) -> AuthResponse:
-        """Create AuthResponse DTO combining user and token data."""
-        return AuthResponse(
-            user=UserMapper.to_response(user),
-            tokens=TokenMapper.to_token_response(access_token, refresh_token, expires_in)
-        )
+# Singleton instance
+user_mapper = UserMapper()
