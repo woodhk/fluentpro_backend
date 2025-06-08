@@ -5,6 +5,7 @@ These events represent significant user lifecycle events.
 
 from datetime import datetime
 from typing import Optional
+from pydantic import Field
 
 from domains.shared.events.base_event import DomainEvent
 
@@ -12,18 +13,18 @@ from domains.shared.events.base_event import DomainEvent
 class UserRegisteredEvent(DomainEvent):
     """Event raised when a new user registers in the system."""
     
-    user_id: str
-    email: str
-    full_name: str
-    auth0_id: str
-    registration_source: str = "web"
+    user_id: str = Field(..., description="Unique identifier of the registered user")
+    email: str = Field(..., description="Email address of the registered user")
+    full_name: str = Field(..., description="Full name of the registered user")
+    auth0_id: str = Field(..., description="Auth0 unique identifier for the user")
+    registration_source: str = Field(default="web", description="Source of registration (web, mobile, api)")
+    event_type: str = Field(default="user.registered", description="Type of the event")
     
     def __init__(self, **data):
-        super().__init__(
-            event_type="user.registered",
-            aggregate_id=data.get('user_id'),
-            **data
-        )
+        # Set aggregate_id to user_id if not provided
+        if 'aggregate_id' not in data and 'user_id' in data:
+            data['aggregate_id'] = data['user_id']
+        super().__init__(**data)
 
 
 class UserLoggedInEvent(DomainEvent):

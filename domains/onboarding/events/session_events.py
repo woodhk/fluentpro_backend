@@ -5,6 +5,7 @@ These events track the onboarding process lifecycle.
 
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+from pydantic import Field
 
 from domains.shared.events.base_event import DomainEvent
 
@@ -94,19 +95,20 @@ class OnboardingSessionResumedEvent(DomainEvent):
 class OnboardingSessionCompletedEvent(DomainEvent):
     """Event raised when a user completes the entire onboarding process."""
     
-    user_id: str
-    session_id: str
-    total_duration_minutes: int
-    completed_steps: List[str]
-    skipped_steps: List[str]
-    completion_rate: float  # percentage of steps completed
+    user_id: str = Field(..., description="Unique identifier of the user who completed onboarding")
+    session_id: str = Field(..., description="Unique identifier of the onboarding session")
+    total_duration_minutes: int = Field(..., description="Total time spent on onboarding in minutes")
+    completed_steps: List[str] = Field(..., description="List of completed onboarding steps")
+    skipped_steps: List[str] = Field(..., description="List of skipped onboarding steps")
+    completion_rate: float = Field(..., description="Percentage of steps completed (0.0 to 100.0)")
+    final_user_profile: Optional[Dict[str, Any]] = Field(default=None, description="Final user profile data after onboarding")
+    event_type: str = Field(default="onboarding.session_completed", description="Type of the event")
     
     def __init__(self, **data):
-        super().__init__(
-            event_type="onboarding.session_completed",
-            aggregate_id=data.get('session_id'),
-            **data
-        )
+        # Set aggregate_id to session_id if not provided
+        if 'aggregate_id' not in data and 'session_id' in data:
+            data['aggregate_id'] = data['session_id']
+        super().__init__(**data)
 
 
 class OnboardingSessionAbandonedEvent(DomainEvent):

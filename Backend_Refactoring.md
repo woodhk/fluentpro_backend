@@ -28,26 +28,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   **Goal:** Enhance the existing event bus with Redis Streams for reliable event processing and add event sourcing capabilities.
 
-  **Step 1: Implement Redis Streams-based event bus**
-  
-  **Actions:**
-  1. Create Redis client wrapper in infrastructure/persistence/cache/
-  2. Enhance event_bus.py to use Redis Streams
-  3. Add consumer group management
-  
-  **Files to create:**
-  - `infrastructure/persistence/cache/__init__.py`
-  - `infrastructure/persistence/cache/redis_client.py` (Redis Streams client)
-  - `infrastructure/persistence/cache/cache_manager.py` (cache abstraction)
-  
-  **Files to modify:**
-  - `infrastructure/messaging/event_bus.py` (add RedisStreamsEventBus class)
-  
-  **Before:** Basic Redis pub/sub event bus
-  **After:** Redis Streams with consumer groups, acknowledgments, and replay capability
-  
-  **Verification:** Events persist in Redis and can be replayed after consumer restart
-
   **Step 2: Enhance event definitions and add new events**
   
   **Actions:**
