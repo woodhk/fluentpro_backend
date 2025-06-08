@@ -38,6 +38,26 @@ from domains.authentication.events.session_events import (
 logger = logging.getLogger(__name__)
 
 
+# Cross-Domain Event Handlers
+
+async def handle_onboarding_completed(event):
+    """Handle onboarding completion event from onboarding domain."""
+    logger.info(f"Onboarding completed event received for user: {event.user_id}")
+    
+    try:
+        # Update user profile with onboarding completion
+        await _update_user_onboarding_completion(event.user_id, event.session_id)
+        
+        # Send onboarding completion notification
+        await _send_onboarding_completion_notification(event.user_id)
+        
+        # Track cross-domain event handling
+        await _track_cross_domain_event("onboarding_completed", event.user_id)
+        
+    except Exception as e:
+        logger.error(f"Error handling onboarding completed event: {e}")
+
+
 # User Event Handlers
 
 async def handle_user_registered(event: UserRegisteredEvent):
@@ -388,3 +408,18 @@ async def _update_user_status(user_id: str, status: str):
     """Update user status in analytics."""
     # TODO: Implement user status update
     logger.info(f"Would update status to {status} for user {user_id}")
+
+
+async def _update_user_onboarding_completion(user_id: str, session_id: str):
+    """Update user profile with onboarding completion data."""
+    logger.info(f"Would update onboarding completion for user {user_id}")
+
+
+async def _send_onboarding_completion_notification(user_id: str):
+    """Send notification about onboarding completion."""
+    logger.info(f"Would send onboarding completion notification to user {user_id}")
+
+
+async def _track_cross_domain_event(event_type: str, user_id: str):
+    """Track cross-domain event handling."""
+    logger.info(f"Would track cross-domain event {event_type} for user {user_id}")

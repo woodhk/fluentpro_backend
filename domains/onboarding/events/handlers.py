@@ -32,6 +32,23 @@ from domains.onboarding.events.preference_events import (
 logger = logging.getLogger(__name__)
 
 
+# Cross-Domain Event Handlers
+
+async def handle_user_registered(event):
+    """Handle user registration event from authentication domain."""
+    logger.info(f"User registered event received: {event.user_id}, starting onboarding process")
+    
+    try:
+        # Start onboarding session for newly registered user
+        await _start_onboarding_for_new_user(event.user_id, event.email, event.full_name)
+        
+        # Track cross-domain event handling
+        await _track_cross_domain_event("user_registered", event.user_id)
+        
+    except Exception as e:
+        logger.error(f"Error handling user registered event: {e}")
+
+
 # Session Event Handlers
 
 async def handle_onboarding_session_started(event: OnboardingSessionStartedEvent):
@@ -636,3 +653,13 @@ async def _track_personalization_completion(user_id: str, score: float, features
 async def _initialize_adaptive_learning_engine(user_id: str):
     """Initialize adaptive learning engine."""
     logger.info(f"Would initialize adaptive learning for user {user_id}")
+
+
+async def _start_onboarding_for_new_user(user_id: str, email: str, full_name: str):
+    """Start onboarding session for newly registered user."""
+    logger.info(f"Would start onboarding session for new user {user_id}")
+
+
+async def _track_cross_domain_event(event_type: str, user_id: str):
+    """Track cross-domain event handling."""
+    logger.info(f"Would track cross-domain event {event_type} for user {user_id}")

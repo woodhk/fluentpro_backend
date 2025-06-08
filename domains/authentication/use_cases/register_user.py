@@ -20,6 +20,8 @@ from authentication.models.auth import UserRegistration
 from authentication.models.user import User
 from domains.authentication.services.interfaces import IAuthService
 from domains.authentication.repositories.interfaces import IAuthUserRepository
+from domains.authentication.events.user_events import UserRegisteredEvent
+from infrastructure.messaging.event_bus import IEventBus
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,8 @@ class RegisterUserUseCase(UseCase[SignupRequest, AuthResponse]):
     def __init__(
         self,
         auth_service: IAuthService,
-        user_repository: IAuthUserRepository
+        user_repository: IAuthUserRepository,
+        event_bus: IEventBus
     ):
         """
         Initialize with injected dependencies.
@@ -57,9 +60,11 @@ class RegisterUserUseCase(UseCase[SignupRequest, AuthResponse]):
         Args:
             auth_service: Authentication service for user creation
             user_repository: Repository for user data operations
+            event_bus: Event bus for publishing domain events
         """
         self.auth_service = auth_service
         self.user_repository = user_repository
+        self.event_bus = event_bus
     
     async def execute(self, request: SignupRequest) -> AuthResponse:
         """
@@ -105,6 +110,15 @@ class RegisterUserUseCase(UseCase[SignupRequest, AuthResponse]):
             )
             
             supabase_user = await self.user_repository.save(user)
+            
+            # Publish event
+            event = UserRegisteredEvent(
+                user_id=str(supabase_user.id),
+                email=supabase_user.email,
+                full_name=supabase_user.full_name,
+                auth0_id=supabase_user.auth0_id
+            )
+            await self.event_bus.publish(event)
             
             # Authenticate the user to get tokens
             auth_response = self.auth_service.authenticate(request.email, request.password)
