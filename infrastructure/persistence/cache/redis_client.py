@@ -387,3 +387,189 @@ class RedisStreamsClient:
     def is_connected(self) -> bool:
         """Check if client is connected to Redis"""
         return self._redis is not None
+    
+    # Session management methods
+    async def set_session(
+        self,
+        key: str,
+        value: str,
+        ttl_seconds: int = 3600
+    ) -> bool:
+        """
+        Set session data with TTL
+        
+        Args:
+            key: Session key
+            value: Session data (serialized)
+            ttl_seconds: Time to live in seconds
+            
+        Returns:
+            True if set successfully
+        """
+        try:
+            result = await self._redis.setex(key, ttl_seconds, value)
+            logger.debug(f"Set session key {key} with TTL {ttl_seconds}s")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to set session {key}: {e}")
+            raise
+    
+    async def get_session(self, key: str) -> Optional[str]:
+        """
+        Get session data by key
+        
+        Args:
+            key: Session key
+            
+        Returns:
+            Session data or None if not found
+        """
+        try:
+            result = await self._redis.get(key)
+            return result.decode() if result else None
+        except Exception as e:
+            logger.error(f"Failed to get session {key}: {e}")
+            raise
+    
+    async def delete_session(self, key: str) -> bool:
+        """
+        Delete session by key
+        
+        Args:
+            key: Session key
+            
+        Returns:
+            True if deleted successfully
+        """
+        try:
+            result = await self._redis.delete(key)
+            logger.debug(f"Deleted session key {key}")
+            return result > 0
+        except Exception as e:
+            logger.error(f"Failed to delete session {key}: {e}")
+            raise
+    
+    async def extend_session_ttl(self, key: str, ttl_seconds: int) -> bool:
+        """
+        Extend session TTL
+        
+        Args:
+            key: Session key
+            ttl_seconds: New TTL in seconds
+            
+        Returns:
+            True if TTL extended successfully
+        """
+        try:
+            result = await self._redis.expire(key, ttl_seconds)
+            logger.debug(f"Extended TTL for session {key} to {ttl_seconds}s")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to extend TTL for session {key}: {e}")
+            raise
+    
+    async def get_session_ttl(self, key: str) -> int:
+        """
+        Get remaining TTL for session
+        
+        Args:
+            key: Session key
+            
+        Returns:
+            Remaining TTL in seconds (-1 if no TTL, -2 if key doesn't exist)
+        """
+        try:
+            return await self._redis.ttl(key)
+        except Exception as e:
+            logger.error(f"Failed to get TTL for session {key}: {e}")
+            raise
+    
+    async def add_to_session_set(self, set_key: str, value: str) -> int:
+        """
+        Add value to a session set (for user sessions tracking)
+        
+        Args:
+            set_key: Set key
+            value: Value to add
+            
+        Returns:
+            Number of elements added to the set
+        """
+        try:
+            result = await self._redis.sadd(set_key, value)
+            logger.debug(f"Added {value} to session set {set_key}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to add to session set {set_key}: {e}")
+            raise
+    
+    async def remove_from_session_set(self, set_key: str, value: str) -> int:
+        """
+        Remove value from a session set
+        
+        Args:
+            set_key: Set key
+            value: Value to remove
+            
+        Returns:
+            Number of elements removed from the set
+        """
+        try:
+            result = await self._redis.srem(set_key, value)
+            logger.debug(f"Removed {value} from session set {set_key}")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to remove from session set {set_key}: {e}")
+            raise
+    
+    async def get_session_set_members(self, set_key: str) -> List[str]:
+        """
+        Get all members of a session set
+        
+        Args:
+            set_key: Set key
+            
+        Returns:
+            List of set members
+        """
+        try:
+            members = await self._redis.smembers(set_key)
+            return [member.decode() if isinstance(member, bytes) else member for member in members]
+        except Exception as e:
+            logger.error(f"Failed to get session set members {set_key}: {e}")
+            raise
+    
+    async def session_exists(self, key: str) -> bool:
+        """
+        Check if session key exists
+        
+        Args:
+            key: Session key
+            
+        Returns:
+            True if key exists
+        """
+        try:
+            result = await self._redis.exists(key)
+            return result > 0
+        except Exception as e:
+            logger.error(f"Failed to check session existence {key}: {e}")
+            raise
+    
+    async def scan_session_keys(self, pattern: str, count: int = 100):
+        """
+        Scan for session keys matching pattern
+        
+        Args:
+            pattern: Key pattern to match
+            count: Number of keys to return per iteration
+            
+        Returns:
+            Async iterator of matching keys
+        """
+        try:
+            async for key in self._redis.scan_iter(match=pattern, count=count):
+                yield key.decode() if isinstance(key, bytes) else key
+        except Exception as e:
+            logger.error(f"Failed to scan session keys with pattern {pattern}: {e}")
+            raise
