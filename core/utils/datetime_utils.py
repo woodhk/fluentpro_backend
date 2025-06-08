@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from typing import Optional
 
 def utc_now() -> datetime:
@@ -98,3 +98,14 @@ def calculate_duration(start_dt: datetime, end_dt: datetime) -> dict:
         'total_hours': diff.total_seconds() / 3600,
         'total_days': diff.total_seconds() / 86400
     }
+
+def calculate_age(birth_date: date) -> int:
+    """Calculate age from birth date"""
+    today = date.today()
+    age = today.year - birth_date.year
+    
+    # Check if birthday hasn't occurred this year
+    if (today.month, today.day) < (birth_date.month, birth_date.day):
+        age -= 1
+    
+    return age

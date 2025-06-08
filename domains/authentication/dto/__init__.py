@@ -22,9 +22,7 @@ from .responses import (
 )
 
 from .mappers import (
-    UserMapper,
-    RoleMapper,
-    TokenMapper
+    UserMapper
 )
 
 __all__ = [
@@ -47,6 +45,4 @@ __all__ = [
     'OnboardingStatus',
     # Mappers
     'UserMapper',
-    'RoleMapper',
-    'TokenMapper',
 ]

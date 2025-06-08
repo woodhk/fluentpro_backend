@@ -15,7 +15,7 @@ from core.exceptions import (
 )
 from domains.authentication.dto.requests import LoginRequest
 from domains.authentication.dto.responses import AuthResponse, TokenResponse, UserResponse
-from domains.authentication.services.interfaces import IAuthService
+from domains.authentication.services.interfaces import IAuthenticationService as IAuthService
 from domains.authentication.repositories.interfaces import IAuthUserRepository
 
 logger = logging.getLogger(__name__)

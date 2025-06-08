@@ -13,8 +13,8 @@ from core.exceptions import (
     BusinessLogicError
 )
 from domains.onboarding.dto.requests import StartOnboardingRequest
-from domains.onboarding.dto.responses import OnboardingSessionResponse, OnboardingStep, OnboardingSessionStatus
-from onboarding.models.onboarding import OnboardingFlow
+from domains.onboarding.dto.responses import OnboardingSessionResponse, OnboardingStep, OnboardingStatus
+from domains.onboarding.models.onboarding_session import OnboardingSession
 from domains.shared.repositories.interfaces import IUserRepository
 from domains.onboarding.services.interfaces import IOnboardingService
 

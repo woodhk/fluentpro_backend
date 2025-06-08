@@ -16,9 +16,8 @@ from core.exceptions import (
 )
 from domains.authentication.dto.requests import SignupRequest
 from domains.authentication.dto.responses import AuthResponse, TokenResponse, UserResponse
-from authentication.models.auth import UserRegistration
-from authentication.models.user import User
-from domains.authentication.services.interfaces import IAuthService
+from domains.authentication.models.user import User
+from domains.authentication.services.interfaces import IAuthenticationService as IAuthService
 from domains.authentication.repositories.interfaces import IAuthUserRepository
 from domains.authentication.events.user_events import UserRegisteredEvent
 from infrastructure.messaging.event_bus import IEventBus

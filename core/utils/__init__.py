@@ -28,7 +28,8 @@ from .datetime_utils import (
     add_business_days,
     is_business_day,
     get_timezone_offset,
-    calculate_duration
+    calculate_duration,
+    calculate_age
 )
 
 # String utilities
@@ -83,6 +84,7 @@ __all__ = [
     'is_business_day',
     'get_timezone_offset',
     'calculate_duration',
+    'calculate_age',
     
     # String
     'clean_string',

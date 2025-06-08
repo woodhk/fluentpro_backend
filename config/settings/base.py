@@ -15,7 +15,7 @@ from decouple import config, Csv
 from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "drf_spectacular_sidecar",
+    "channels",
     
     # Local apps
     "core",
@@ -81,7 +82,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "fluentpro_backend.wsgi.application"
+WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 
 # Database

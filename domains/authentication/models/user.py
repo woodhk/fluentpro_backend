@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any, List
 from enum import Enum
 import logging
 
-from core.utils import calculate_age, validate_email
+from core.utils import calculate_age, is_valid_email as validate_email
 from domains.shared.models.base_entity import BaseEntity
 from domains.authentication.events.user_events import UserRegisteredEvent
 

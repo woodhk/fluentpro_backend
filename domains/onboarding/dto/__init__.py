@@ -24,15 +24,12 @@ from .responses import (
     OnboardingStepResponse,
     OnboardingSummaryResponse,
     OnboardingStep,
-    OnboardingSessionStatus
+    OnboardingStatus
 )
 
 from .mappers import (
     OnboardingSessionMapper,
-    IndustryMapper,
-    RoleMapper,
-    CommunicationMapper,
-    OnboardingSummaryMapper
+    OnboardingStepMapper
 )
 
 __all__ = [
@@ -58,11 +55,8 @@ __all__ = [
     'OnboardingStepResponse',
     'OnboardingSummaryResponse',
     'OnboardingStep',
-    'OnboardingSessionStatus',
+    'OnboardingStatus',
     # Mappers
     'OnboardingSessionMapper',
-    'IndustryMapper',
-    'RoleMapper',
-    'CommunicationMapper',
-    'OnboardingSummaryMapper',
+    'OnboardingStepMapper',
 ]

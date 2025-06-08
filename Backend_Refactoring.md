@@ -24,25 +24,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   ### Week 5: Async Infrastructure
 
-  #### Day 22-23: Event-Driven Architecture Enhancement
-
-  **Goal:** Enhance the existing event bus with Redis Streams for reliable event processing and add event sourcing capabilities.
-
-  **✅ Step 4: Add event sourcing infrastructure**
-  
-  **Actions:**
-  1. ✅ Create event store implementation
-  2. ✅ Add event sourcing pattern to core/patterns/
-  3. ✅ Implement aggregate reconstruction from events
-  
-  **Files created:**
-  - ✅ `infrastructure/persistence/event_store.py` (event storage interface and implementation)
-  - ✅ `core/patterns/event_sourcing.py` (EventSourcedAggregate base class)
-  
-  **Before:** No event persistence or replay capability
-  **After:** Events stored for audit trail and aggregate reconstruction
-  
-  **Verification:** Can reconstruct aggregate state from stored events
 
   #### Day 24: WebSocket Foundation
 

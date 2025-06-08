@@ -16,6 +16,14 @@ class OnboardingStatus(str, Enum):
     ABANDONED = "abandoned"
 
 
+class OnboardingStep(str, Enum):
+    LANGUAGE_SELECTION = "language_selection"
+    INDUSTRY_SELECTION = "industry_selection"
+    ROLE_SELECTION = "role_selection"
+    PARTNER_SELECTION = "partner_selection"
+    SITUATION_CONFIGURATION = "situation_configuration"
+
+
 class OnboardingStepResponse(BaseModel):
     """Individual onboarding step"""
     step_id: str
