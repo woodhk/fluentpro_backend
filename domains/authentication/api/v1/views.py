@@ -12,6 +12,15 @@ from pydantic import ValidationError
 from datetime import timedelta
 import logging
 
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiParameter,
+    OpenApiExample,
+    OpenApiResponse
+)
+from drf_spectacular.types import OpenApiTypes
+
 from api.common.base_views import BaseAPIView
 from api.common.responses import APIResponse
 from api.common.documentation import document_endpoint
@@ -67,24 +76,88 @@ class SignUpView(BaseAPIView, PublicView, VersionedView):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@extend_schema_view(
+    post=extend_schema(
+        summary="User Login",
+        description="Authenticate user with email and password. Returns JWT tokens for subsequent API calls.",
+        tags=["Authentication"],
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'email': {'type': 'string', 'format': 'email'},
+                    'password': {'type': 'string', 'minLength': 8},
+                    'remember_me': {'type': 'boolean', 'default': False}
+                },
+                'required': ['email', 'password']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description="Login successful",
+                examples=[
+                    OpenApiExample(
+                        name="Successful login",
+                        value={
+                            "data": {
+                                "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                                "refresh_token": "def50200b5d3e2e8f6a8f7e9c4d3b2a1...",
+                                "token_type": "Bearer",
+                                "expires_in": 3600
+                            },
+                            "meta": {
+                                "timestamp": "2024-01-15T10:30:00Z",
+                                "version": "v1"
+                            }
+                        }
+                    )
+                ]
+            ),
+            401: OpenApiResponse(
+                description="Invalid credentials",
+                examples=[
+                    OpenApiExample(
+                        name="Invalid credentials",
+                        value={
+                            "error": {
+                                "code": "INVALID_CREDENTIALS",
+                                "message": "Invalid email or password"
+                            }
+                        }
+                    )
+                ]
+            ),
+            422: OpenApiResponse(description="Validation errors")
+        },
+        examples=[
+            OpenApiExample(
+                name="Basic login",
+                request_only=True,
+                value={
+                    "email": "user@example.com",
+                    "password": "SecurePass123!"
+                }
+            ),
+            OpenApiExample(
+                name="Login with remember me",
+                request_only=True,
+                value={
+                    "email": "user@example.com",
+                    "password": "SecurePass123!",
+                    "remember_me": True
+                }
+            )
+        ]
+    )
+)
 class LoginView(BaseAPIView, PublicView, VersionedView):
     """
     User authentication endpoint.
     Validates credentials and returns JWT tokens.
     """
+    authentication_classes = []  # Public endpoint
+    permission_classes = []
     
-    @document_endpoint(
-        summary="User Login",
-        description="Authenticate user with email and password",
-        request_examples=[{
-            "name": "Valid Login",
-            "value": {
-                "email": "user@example.com",
-                "password": "SecurePass123!",
-                "remember_me": True
-            }
-        }]
-    )
     async def post(self, request):
         """Handle user login."""
         # Parse and validate request
