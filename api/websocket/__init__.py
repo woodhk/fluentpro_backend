@@ -1,0 +1,1 @@
+"""WebSocket API module for real-time communication."""

@@ -34,33 +34,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - ASGI configuration in fluentpro_backend/asgi.py
   - No Django Channels dependency
 
-  **Step 1: Add Django Channels dependency and configure ASGI**
-  
-  **Actions:**
-  1. Add channels and channels-redis to requirements/base.txt
-  2. Create config/ directory and move settings there
-  3. Update ASGI configuration for WebSocket support
-  
-  **Before:**
-  ```
-  fluentpro_backend/
-  ├── settings.py (monolithic)
-  └── asgi.py (HTTP only)
-  ```
-  
-  **After:**
-  ```
-  config/
-  ├── settings/
-  │   ├── __init__.py
-  │   ├── base.py (from fluentpro_backend/settings.py)
-  │   ├── development.py
-  │   └── production.py
-  ├── asgi.py (WebSocket + HTTP routing)
-  └── wsgi.py
-  ```
-  
-  **Verification:** Django starts with channels support, WebSocket test connection works
 
   **Step 2: Create WebSocket app structure**
   

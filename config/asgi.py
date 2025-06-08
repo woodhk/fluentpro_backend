@@ -19,8 +19,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 django_asgi_app = get_asgi_application()
 
 # Import WebSocket routing after Django is initialized
-# This will be created in the next steps
-websocket_urlpatterns = []
+from api.websocket.routing import websocket_urlpatterns
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
