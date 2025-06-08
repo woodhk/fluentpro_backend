@@ -24,46 +24,46 @@ class OnboardingStatus(str, Enum):
 
 
 class UserResponse(BaseModel):
-    """DTO for user data in responses."""
-    id: str = Field(..., description="User's unique identifier")
-    email: str = Field(..., description="User's email address")
-    full_name: str = Field(..., description="User's full name")
-    created_at: datetime = Field(..., description="Account creation timestamp")
-    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
-    is_active: bool = Field(True, description="Whether the user account is active")
-    onboarding_status: OnboardingStatus = Field(OnboardingStatus.PENDING, description="User's onboarding status")
-    roles: List[UserRole] = Field(default_factory=lambda: [UserRole.USER], description="User's roles")
+    """User profile response"""
+    id: str
+    email: str
+    full_name: str
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool = True
+    is_verified: bool = False
+    profile_completion: int = Field(default=0, ge=0, le=100)
+    roles: List[str] = []
+    
+    # Computed fields
+    display_name: str = None
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Set display name if not provided
+        if not self.display_name:
+            self.display_name = self.full_name.split()[0] if self.full_name else self.email.split('@')[0]
     
     class Config:
+        orm_mode = True  # Allow creation from ORM models
         json_encoders = {
             datetime: lambda v: v.isoformat()
-        }
-        schema_extra = {
-            "example": {
-                "id": "123e4567-e89b-12d3-a456-426614174000",
-                "email": "user@example.com",
-                "full_name": "John Doe",
-                "created_at": "2024-01-15T10:30:00Z",
-                "updated_at": "2024-01-16T14:20:00Z",
-                "is_active": True,
-                "onboarding_status": "completed",
-                "roles": ["user"]
-            }
         }
 
 
 class TokenResponse(BaseModel):
-    """DTO for authentication token responses."""
-    access_token: str = Field(..., description="JWT access token")
-    refresh_token: str = Field(..., description="JWT refresh token")
-    token_type: str = Field("Bearer", description="Token type")
-    expires_in: int = Field(..., description="Access token expiration time in seconds")
+    """Authentication token response"""
+    access_token: str
+    refresh_token: str
+    token_type: str = "Bearer"
+    expires_in: int = Field(..., description="Seconds until expiration")
+    scope: Optional[str] = None
     
     class Config:
         schema_extra = {
             "example": {
-                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                "refresh_token": "def50200b5d3e2e8f6a8f7e9c4d3b2a1...",
                 "token_type": "Bearer",
                 "expires_in": 3600
             }

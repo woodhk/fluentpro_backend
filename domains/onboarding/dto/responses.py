@@ -4,60 +4,48 @@ These DTOs define the structure of responses from onboarding operations.
 """
 
 from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
 from datetime import datetime
-from typing import List, Optional, Dict, Any
 from enum import Enum
 
 
-class OnboardingStep(str, Enum):
-    """Onboarding process steps."""
-    LANGUAGE_SELECTION = "language_selection"
-    INDUSTRY_SELECTION = "industry_selection"
-    ROLE_SELECTION = "role_selection"
-    PARTNER_SELECTION = "partner_selection"
-    SITUATION_CONFIGURATION = "situation_configuration"
-    COMPLETION = "completion"
-
-
-class OnboardingSessionStatus(str, Enum):
-    """Onboarding session status."""
-    ACTIVE = "active"
-    PAUSED = "paused"
+class OnboardingStatus(str, Enum):
+    NOT_STARTED = "not_started"
+    IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
-    EXPIRED = "expired"
+    ABANDONED = "abandoned"
+
+
+class OnboardingStepResponse(BaseModel):
+    """Individual onboarding step"""
+    step_id: str
+    name: str
+    status: str
+    completed_at: Optional[datetime] = None
+    data: Dict[str, Any] = {}
 
 
 class OnboardingSessionResponse(BaseModel):
-    """DTO for onboarding session information."""
-    session_id: str = Field(..., description="Unique session identifier")
-    user_id: str = Field(..., description="User ID associated with this session")
-    current_step: OnboardingStep = Field(..., description="Current step in the onboarding process")
-    status: OnboardingSessionStatus = Field(..., description="Session status")
-    started_at: datetime = Field(..., description="Session start timestamp")
-    expires_at: datetime = Field(..., description="Session expiration timestamp")
-    progress: Dict[str, bool] = Field(..., description="Progress tracking for each step")
+    """Complete onboarding session response"""
+    session_id: str
+    user_id: str
+    status: OnboardingStatus
+    current_step: Optional[str] = None
+    progress_percentage: int = Field(ge=0, le=100)
+    steps: List[OnboardingStepResponse] = []
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    
+    @property
+    def duration_seconds(self) -> Optional[int]:
+        """Calculate session duration"""
+        if self.completed_at:
+            return int((self.completed_at - self.started_at).total_seconds())
+        return None
     
     class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
-        schema_extra = {
-            "example": {
-                "session_id": "session-123",
-                "user_id": "123e4567-e89b-12d3-a456-426614174000",
-                "current_step": "industry_selection",
-                "status": "active",
-                "started_at": "2024-01-15T10:30:00Z",
-                "expires_at": "2024-01-15T11:30:00Z",
-                "progress": {
-                    "language_selection": True,
-                    "industry_selection": False,
-                    "role_selection": False,
-                    "partner_selection": False,
-                    "situation_configuration": False
-                }
-            }
-        }
+        use_enum_values = True
 
 
 class LanguageOption(BaseModel):

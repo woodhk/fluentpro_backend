@@ -8,52 +8,45 @@ from typing import Optional
 
 
 class LoginRequest(BaseModel):
-    """DTO for user login requests."""
-    email: EmailStr = Field(..., description="User's email address")
-    password: str = Field(..., min_length=1, description="User's password")
+    """Login request DTO"""
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    remember_me: bool = False
     
     class Config:
         schema_extra = {
             "example": {
                 "email": "user@example.com",
-                "password": "securePassword123"
+                "password": "SecurePass123!",
+                "remember_me": True
             }
         }
 
 
 class SignupRequest(BaseModel):
-    """DTO for user signup requests."""
-    email: EmailStr = Field(..., description="User's email address")
-    password: str = Field(..., min_length=8, description="User's password (minimum 8 characters)")
-    full_name: str = Field(..., min_length=1, max_length=255, description="User's full name")
+    """User registration request DTO"""
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    confirm_password: str
+    full_name: str = Field(..., min_length=2, max_length=100)
+    accept_terms: bool
     
-    @validator('full_name')
-    def validate_full_name(cls, v):
-        """Ensure full name contains at least two words."""
-        if len(v.split()) < 2:
-            raise ValueError('Full name must contain at least first and last name')
-        return v.strip()
+    @validator('confirm_password')
+    def passwords_match(cls, v, values):
+        if 'password' in values and v != values['password']:
+            raise ValueError('Passwords do not match')
+        return v
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "email": "newuser@example.com",
-                "password": "securePassword123",
-                "full_name": "John Doe"
-            }
-        }
+    @validator('accept_terms')
+    def terms_accepted(cls, v):
+        if not v:
+            raise ValueError('Terms must be accepted')
+        return v
 
 
 class RefreshTokenRequest(BaseModel):
-    """DTO for token refresh requests."""
-    refresh_token: str = Field(..., description="JWT refresh token")
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-            }
-        }
+    """Token refresh request DTO"""
+    refresh_token: str
 
 
 class LogoutRequest(BaseModel):
@@ -69,24 +62,16 @@ class LogoutRequest(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    """DTO for password change requests."""
-    current_password: str = Field(..., min_length=1, description="Current password")
-    new_password: str = Field(..., min_length=8, description="New password (minimum 8 characters)")
+    """Change password request DTO"""
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+    confirm_password: str
     
-    @validator('new_password')
-    def passwords_different(cls, v, values):
-        """Ensure new password is different from current password."""
-        if 'current_password' in values and v == values['current_password']:
-            raise ValueError('New password must be different from current password')
+    @validator('confirm_password')
+    def passwords_match(cls, v, values):
+        if 'new_password' in values and v != values['new_password']:
+            raise ValueError('Passwords do not match')
         return v
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "current_password": "oldPassword123",
-                "new_password": "newSecurePassword456"
-            }
-        }
 
 
 class ForgotPasswordRequest(BaseModel):
