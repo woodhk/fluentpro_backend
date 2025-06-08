@@ -143,7 +143,7 @@ class AsyncJSONStreamer:
                 "streaming": True,
                 "chunk_size": self.chunk_size
             }
-            yield json.dumps({"meta": metadata, "data": [}, cls=self.json_encoder)[:-2] + ","
+            yield json.dumps({"meta": metadata, "data": []}, cls=self.json_encoder)[:-2] + ","
         else:
             yield "["
         

@@ -13,7 +13,7 @@ from core.exceptions import (
     BusinessLogicError
 )
 from domains.shared.repositories.interfaces import IUserRepository
-from authentication.models.user import NativeLanguage
+from domains.authentication.models.user import NativeLanguage
 from domains.onboarding.services.interfaces import IProfileSetupService
 
 logger = logging.getLogger(__name__)

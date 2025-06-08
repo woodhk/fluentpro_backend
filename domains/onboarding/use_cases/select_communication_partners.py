@@ -16,7 +16,7 @@ from core.exceptions import (
 )
 from domains.onboarding.dto.requests import SelectCommunicationPartnersRequest
 from domains.onboarding.dto.responses import OnboardingStepResponse, OnboardingStep
-from onboarding.models.communication import UserCommunicationPartnerSelection
+from domains.onboarding.models.communication_partner import UserCommunicationPartnerSelection
 from domains.onboarding.repositories.interfaces import IPartnerRepository
 from domains.shared.repositories.interfaces import IUserRepository
 from domains.onboarding.services.interfaces import IProfileSetupService

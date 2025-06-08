@@ -13,7 +13,7 @@ from core.exceptions import (
     ResourceNotFoundError,
     BusinessLogicError
 )
-from onboarding.models.communication import UserUnitSelection
+from domains.onboarding.models.communication_partner import UserUnitSelection
 from domains.onboarding.repositories.interfaces import IPartnerRepository
 from domains.onboarding.services.interfaces import IProfileSetupService
 

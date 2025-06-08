@@ -32,3 +32,8 @@ redis==5.0.1
 
 # Testing dependencies
 faker==26.0.0
+pytest==7.4.0
+pytest-asyncio==0.21.1
+pytest-django==4.5.2
+pytest-mock==3.11.1
+pytest-cov==4.1.0

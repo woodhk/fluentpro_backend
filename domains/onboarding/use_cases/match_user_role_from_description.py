@@ -12,7 +12,7 @@ from core.exceptions import (
     AzureSearchError,
     BusinessLogicError
 )
-from authentication.models.role import JobDescription, RoleMatch
+from domains.authentication.models.role import JobDescription, RoleMatch
 from infrastructure.external_services.azure.client import IAzureCognitiveSearchClient
 from infrastructure.external_services.openai.client import IOpenAIClient
 

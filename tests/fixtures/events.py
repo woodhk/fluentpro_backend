@@ -5,10 +5,9 @@ Event fixtures for testing domain events and messaging.
 import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from domains.shared.events.base_event import BaseEvent
+from domains.shared.events.base_event import DomainEvent
 from domains.authentication.events.user_events import (
-    UserCreatedEvent, UserUpdatedEvent, UserDeletedEvent,
-    UserProfileUpdatedEvent, UserStatusChangedEvent
+    UserRegisteredEvent, UserLoggedInEvent, UserLoggedOutEvent
 )
 from domains.authentication.events.session_events import (
     SessionStartedEvent, SessionEndedEvent, SessionExtendedEvent
@@ -32,18 +31,14 @@ class EventFixtures:
         user_id: Optional[str] = None,
         correlation_id: Optional[str] = None,
         **kwargs
-    ) -> BaseEvent:
+    ) -> DomainEvent:
         """Create a basic event with default values."""
-        return BaseEvent(
-            id=kwargs.get('id', str(uuid.uuid4())),
+        return DomainEvent(
+            event_id=kwargs.get('event_id', str(uuid.uuid4())),
+            aggregate_id=user_id or str(uuid.uuid4()),
             event_type=event_type,
-            data=data,
-            user_id=user_id or str(uuid.uuid4()),
             correlation_id=correlation_id or str(uuid.uuid4()),
-            timestamp=kwargs.get('timestamp', datetime.utcnow()),
-            version=kwargs.get('version', 1),
-            source=kwargs.get('source', 'test'),
-            metadata=kwargs.get('metadata', {})
+            metadata={**kwargs.get('metadata', {}), 'data': data}
         )
 
 
@@ -291,7 +286,7 @@ class EventScenarioFixtures:
     def create_user_registration_flow(
         user_id: Optional[str] = None,
         correlation_id: Optional[str] = None
-    ) -> List[BaseEvent]:
+    ) -> List[DomainEvent]:
         """Create a complete user registration event flow."""
         user_id = user_id or str(uuid.uuid4())
         correlation_id = correlation_id or str(uuid.uuid4())
@@ -315,7 +310,7 @@ class EventScenarioFixtures:
     def create_onboarding_completion_flow(
         user_id: Optional[str] = None,
         correlation_id: Optional[str] = None
-    ) -> List[BaseEvent]:
+    ) -> List[DomainEvent]:
         """Create a complete onboarding completion event flow."""
         user_id = user_id or str(uuid.uuid4())
         correlation_id = correlation_id or str(uuid.uuid4())
@@ -355,7 +350,7 @@ class EventScenarioFixtures:
     def create_user_session_lifecycle(
         user_id: Optional[str] = None,
         correlation_id: Optional[str] = None
-    ) -> List[BaseEvent]:
+    ) -> List[DomainEvent]:
         """Create a complete user session lifecycle."""
         user_id = user_id or str(uuid.uuid4())
         correlation_id = correlation_id or str(uuid.uuid4())
@@ -380,7 +375,7 @@ class EventScenarioFixtures:
         ]
 
 
-def create_event_batch(count: int = 10) -> List[BaseEvent]:
+def create_event_batch(count: int = 10) -> List[DomainEvent]:
     """Create a batch of mixed events for bulk testing."""
     events = []
     

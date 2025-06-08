@@ -8,24 +8,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   **Goal:** Establish comprehensive testing infrastructure with proper fixtures, mocks, and coverage reporting.
 
-  **Step 3: Enhance mock service implementations**
-  
-  **Actions:**
-  1. Review existing mocks in tests/mocks/
-  2. Add mocks for new async services
-  3. Create mocks for external services (OpenAI, Auth0)
-  
-  **Current Files to Review:**
-  - `tests/mocks/services.py` (check current implementations)
-  - `tests/mocks/repositories.py` (check current implementations)
-  
-  **Files to enhance:**
-  - `tests/mocks/services.py` (add async service mocks)
-  - `tests/mocks/repositories.py` (add new repository mocks)
-  - `tests/mocks/external_services.py` (mock OpenAI, Auth0, etc.)
-  
-  **Verification:** All external dependencies can be mocked for testing
-
   **Step 4: Add comprehensive pytest configuration**
   
   **Actions:**

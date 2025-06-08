@@ -10,8 +10,8 @@ from domains.authentication.repositories.interfaces import IUserRepository, IRol
 from domains.onboarding.repositories.interfaces import IIndustryRepository, IPartnerRepository
 from domains.authentication.models.user import User, UserProfile, OnboardingStatus
 from domains.authentication.models.role import Role, RoleMatch, HierarchyLevel
-from infrastructure.persistence.event_store import IEventStore
-from domains.shared.events.base_event import DomainEvent
+# from infrastructure.persistence.event_store import IEventStore
+# from domains.shared.events.base_event import DomainEvent
 
 
 class MockUserRepository(IUserRepository):
@@ -468,87 +468,3 @@ class MockPartnerRepository(IPartnerRepository):
             'active_units': len([u for u in self.units.values() if u.get('is_active', True)]),
             'user_selections': len(self.user_units)
         }
-
-
-class MockEventStore(IEventStore):
-    """Mock implementation of IEventStore for testing."""
-    
-    def __init__(self):
-        self.events: Dict[str, List[DomainEvent]] = {}
-        self.versions: Dict[str, int] = {}
-    
-    async def save_events(self, aggregate_id: str, events: List[DomainEvent], expected_version: int) -> None:
-        """Mock save_events - stores events for aggregate"""
-        current_version = self.versions.get(aggregate_id, 0)
-        
-        # Check optimistic concurrency
-        if expected_version != current_version:
-            raise Exception(f"Concurrency conflict: expected version {expected_version}, got {current_version}")
-        
-        if aggregate_id not in self.events:
-            self.events[aggregate_id] = []
-        
-        # Add events with incremented versions
-        for i, event in enumerate(events):
-            event.version = current_version + i + 1
-            self.events[aggregate_id].append(event)
-        
-        # Update version
-        self.versions[aggregate_id] = current_version + len(events)
-    
-    async def get_events(self, aggregate_id: str, from_version: int = 0) -> List[DomainEvent]:
-        """Mock get_events - returns events for aggregate"""
-        if aggregate_id not in self.events:
-            return []
-        
-        all_events = self.events[aggregate_id]
-        return [event for event in all_events if event.version > from_version]
-    
-    async def get_events_by_type(self, event_type: str, limit: int = 100) -> List[DomainEvent]:
-        """Mock get_events_by_type - returns events of specific type"""
-        result = []
-        for aggregate_events in self.events.values():
-            for event in aggregate_events:
-                if event.event_type == event_type:
-                    result.append(event)
-                    if len(result) >= limit:
-                        break
-            if len(result) >= limit:
-                break
-        
-        return result[:limit]
-    
-    async def get_latest_version(self, aggregate_id: str) -> int:
-        """Mock get_latest_version - returns current version"""
-        return self.versions.get(aggregate_id, 0)
-    
-    async def get_all_aggregate_ids(self) -> List[str]:
-        """Mock get_all_aggregate_ids - returns all aggregate IDs"""
-        return list(self.events.keys())
-    
-    async def delete_aggregate_events(self, aggregate_id: str) -> bool:
-        """Mock delete_aggregate_events - removes all events for aggregate"""
-        if aggregate_id in self.events:
-            del self.events[aggregate_id]
-            if aggregate_id in self.versions:
-                del self.versions[aggregate_id]
-            return True
-        return False
-    
-    def clear_events(self) -> None:
-        """Test helper to clear all events"""
-        self.events.clear()
-        self.versions.clear()
-    
-    def get_event_count(self, aggregate_id: Optional[str] = None) -> int:
-        """Test helper to get event count"""
-        if aggregate_id:
-            return len(self.events.get(aggregate_id, []))
-        return sum(len(events) for events in self.events.values())
-    
-    def get_all_events(self) -> List[DomainEvent]:
-        """Test helper to get all events across all aggregates"""
-        all_events = []
-        for events in self.events.values():
-            all_events.extend(events)
-        return sorted(all_events, key=lambda e: e.timestamp)

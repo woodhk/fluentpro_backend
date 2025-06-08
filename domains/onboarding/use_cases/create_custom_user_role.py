@@ -10,7 +10,7 @@ from core.exceptions import (
     ValidationError,
     BusinessLogicError
 )
-from authentication.models.role import JobDescription, Role
+from domains.authentication.models.role import JobDescription, Role
 from domains.shared.repositories.interfaces import IRoleRepository
 from domains.onboarding.repositories.interfaces import IIndustryRepository
 from infrastructure.external_services.azure.client import IAzureCognitiveSearchClient

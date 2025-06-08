@@ -17,7 +17,7 @@ from domains.onboarding.dto.requests import CompleteOnboardingRequest
 from domains.onboarding.dto.responses import OnboardingSummaryResponse
 from domains.shared.repositories.interfaces import IUserRepository
 from domains.onboarding.repositories.interfaces import IPartnerRepository
-from authentication.models.user import OnboardingStatus
+from domains.authentication.models.user import OnboardingStatus
 from domains.onboarding.services.interfaces import IOnboardingService
 
 logger = logging.getLogger(__name__)

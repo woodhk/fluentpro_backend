@@ -145,7 +145,7 @@ class RoleFactory:
         title: Optional[str] = None,
         description: Optional[str] = None,
         industry_id: Optional[str] = None,
-        hierarchy_level: HierarchyLevel = HierarchyLevel.INDIVIDUAL_CONTRIBUTOR,
+        hierarchy_level: HierarchyLevel = HierarchyLevel.ASSOCIATE,
         is_active: bool = True,
         **kwargs
     ) -> Role:
@@ -188,7 +188,7 @@ class RoleFactory:
         return RoleFactory.create_role(
             title="Software Engineer",
             description="Develops and maintains software applications",
-            hierarchy_level=HierarchyLevel.INDIVIDUAL_CONTRIBUTOR,
+            hierarchy_level=HierarchyLevel.ASSOCIATE,
             industry_id="tech"
         )
 
