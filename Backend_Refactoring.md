@@ -24,38 +24,9 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   ### Week 5: Async Infrastructure
 
-  #### Day 20-21: Celery Integration
-
-  **Goal:** Establish background task processing infrastructure with Celery and Redis for async operations.
-
-  **Starting State:** 
-  - Single requirements.txt file
-  - No workers/ directory
-  - Empty domains/*/tasks/ directories
-  - Basic Redis cache configuration in settings.py
-
-  **Step 5: Add task monitoring with Flower and Docker setup**
-  
-  **Actions:**
-  1. Add Flower to development requirements
-  2. Create Docker Compose configuration
-  3. Configure monitoring dashboard
-  
-  **Files to create:**
-  - `docker/docker-compose.yml` (Redis, Celery worker, Flower)
-  - `docker/docker-compose.override.yml` (development overrides)
-  
-  **Verification:** Access Flower dashboard at http://localhost:5555
-
   #### Day 22-23: Event-Driven Architecture Enhancement
 
   **Goal:** Enhance the existing event bus with Redis Streams for reliable event processing and add event sourcing capabilities.
-
-  **Starting State:** 
-  - Basic InMemoryEventBus and RedisEventBus in infrastructure/messaging/event_bus.py
-  - Event definitions exist but may need enhancement
-  - No Redis Streams implementation
-  - No event sourcing capability
 
   **Step 1: Implement Redis Streams-based event bus**
   
