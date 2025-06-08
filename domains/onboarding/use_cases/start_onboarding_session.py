@@ -15,7 +15,7 @@ from core.exceptions import (
 from domains.onboarding.dto.requests import StartOnboardingRequest
 from domains.onboarding.dto.responses import OnboardingSessionResponse, OnboardingStep, OnboardingSessionStatus
 from onboarding.models.onboarding import OnboardingFlow
-from domains.authentication.repositories.interfaces import IUserRepository
+from domains.shared.repositories.interfaces import IUserRepository
 from domains.onboarding.services.interfaces import IOnboardingService
 
 logger = logging.getLogger(__name__)

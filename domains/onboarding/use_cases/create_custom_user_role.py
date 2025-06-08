@@ -11,7 +11,7 @@ from core.exceptions import (
     BusinessLogicError
 )
 from authentication.models.role import JobDescription, Role
-from domains.authentication.repositories.interfaces import IRoleRepository
+from domains.shared.repositories.interfaces import IRoleRepository
 from domains.onboarding.repositories.interfaces import IIndustryRepository
 from infrastructure.external_services.azure.client import IAzureCognitiveSearchClient
 from infrastructure.external_services.openai.client import IOpenAIClient

@@ -12,7 +12,7 @@ from core.exceptions import (
     SupabaseUserNotFoundError,
     BusinessLogicError
 )
-from domains.authentication.repositories.interfaces import IUserRepository
+from domains.shared.repositories.interfaces import IUserRepository
 from authentication.models.user import NativeLanguage
 from domains.onboarding.services.interfaces import IProfileSetupService
 

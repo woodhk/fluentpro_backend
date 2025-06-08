@@ -23,9 +23,9 @@ def mock_auth_service():
 @pytest.fixture
 def authentication_container(mock_user_repository, mock_role_repository, mock_auth_service):
     """Provide complete authentication domain container"""
-    from application.container import Container
+    from application.container import ApplicationContainer
     
-    container = Container()
+    container = ApplicationContainer()
     container.repositories.user_repository.override(mock_user_repository)
     container.repositories.role_repository.override(mock_role_repository)
     container.services.auth_service.override(mock_auth_service)

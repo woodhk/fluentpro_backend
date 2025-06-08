@@ -16,7 +16,7 @@ from core.exceptions import (
 from domains.authentication.dto.requests import LoginRequest
 from domains.authentication.dto.responses import AuthResponse, TokenResponse, UserResponse
 from domains.authentication.services.interfaces import IAuthService
-from domains.authentication.repositories.interfaces import IUserRepository
+from domains.authentication.repositories.interfaces import IAuthUserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class AuthenticateUserUseCase(UseCase[LoginRequest, AuthResponse]):
     def __init__(
         self,
         auth_service: IAuthService,
-        user_repository: IUserRepository
+        user_repository: IAuthUserRepository
     ):
         """
         Initialize with injected dependencies.

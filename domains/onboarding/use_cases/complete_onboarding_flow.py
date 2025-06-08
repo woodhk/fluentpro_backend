@@ -15,7 +15,7 @@ from core.exceptions import (
 )
 from domains.onboarding.dto.requests import CompleteOnboardingRequest
 from domains.onboarding.dto.responses import OnboardingSummaryResponse
-from domains.authentication.repositories.interfaces import IUserRepository
+from domains.shared.repositories.interfaces import IUserRepository
 from domains.onboarding.repositories.interfaces import IPartnerRepository
 from authentication.models.user import OnboardingStatus
 from domains.onboarding.services.interfaces import IOnboardingService
