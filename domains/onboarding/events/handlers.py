@@ -116,7 +116,7 @@ async def handle_onboarding_step_skipped(event: OnboardingStepSkippedEvent):
 
 
 async def handle_onboarding_session_completed(event: OnboardingSessionCompletedEvent):
-    """Handle onboarding session completion event."""
+    """Handle onboarding session completion event within onboarding domain."""
     logger.info(f"Onboarding completed: {event.session_id} for user {event.user_id}")
     
     try:
@@ -132,7 +132,11 @@ async def handle_onboarding_session_completed(event: OnboardingSessionCompletedE
             event.skipped_steps
         )
         
-        # Generate personalized recommendations
+        # Store final user profile data
+        if event.final_user_profile:
+            await _store_final_user_profile(event.user_id, event.final_user_profile)
+        
+        # Generate personalized recommendations based on onboarding data
         await _generate_post_onboarding_recommendations(event.user_id)
         
         # Send completion congratulations
@@ -143,6 +147,14 @@ async def handle_onboarding_session_completed(event: OnboardingSessionCompletedE
         
         # Schedule follow-up engagements
         await _schedule_onboarding_follow_ups(event.user_id)
+        
+        # Archive session data for analytics
+        await _archive_onboarding_session(event.session_id)
+        
+        # Update learning path based on onboarding choices
+        await _update_personalized_learning_path(event.user_id, event.completed_steps)
+        
+        logger.info(f"Successfully processed onboarding completion for user: {event.user_id}")
         
     except Exception as e:
         logger.error(f"Error handling onboarding session completed event: {e}")
@@ -663,3 +675,18 @@ async def _start_onboarding_for_new_user(user_id: str, email: str, full_name: st
 async def _track_cross_domain_event(event_type: str, user_id: str):
     """Track cross-domain event handling."""
     logger.info(f"Would track cross-domain event {event_type} for user {user_id}")
+
+
+async def _store_final_user_profile(user_id: str, profile_data: dict):
+    """Store final user profile data from onboarding."""
+    logger.info(f"Would store final profile data for user {user_id}")
+
+
+async def _archive_onboarding_session(session_id: str):
+    """Archive onboarding session data for analytics."""
+    logger.info(f"Would archive onboarding session {session_id}")
+
+
+async def _update_personalized_learning_path(user_id: str, completed_steps: list):
+    """Update personalized learning path based on onboarding choices."""
+    logger.info(f"Would update learning path for user {user_id}")

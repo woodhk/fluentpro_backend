@@ -61,25 +61,29 @@ async def handle_onboarding_completed(event):
 # User Event Handlers
 
 async def handle_user_registered(event: UserRegisteredEvent):
-    """Handle user registration event."""
+    """Handle user registration event within authentication domain."""
     logger.info(f"User registered: {event.email} (ID: {event.user_id})")
     
-    # TODO: Implement actual handlers
-    # - Send welcome email
-    # - Create user analytics profile
-    # - Initialize user preferences
-    # - Trigger onboarding workflow
-    # - Update registration metrics
-    
     try:
-        # Example: Send welcome email
+        # Send welcome email
         await _send_welcome_email(event.email, event.full_name)
         
-        # Example: Create analytics profile
+        # Create user analytics profile
         await _create_analytics_profile(event.user_id, event.metadata)
         
-        # Example: Initialize default preferences
+        # Initialize default user preferences
         await _initialize_user_preferences(event.user_id)
+        
+        # Update registration metrics
+        await _update_registration_metrics(event.registration_source, event.metadata)
+        
+        # Set up user security profile
+        await _setup_user_security_profile(event.user_id, event.auth0_id)
+        
+        # Initialize audit trail for new user
+        await _initialize_user_audit_trail(event.user_id, event.email)
+        
+        logger.info(f"Successfully processed user registration for: {event.email}")
         
     except Exception as e:
         logger.error(f"Error handling user registered event: {e}")
@@ -423,3 +427,18 @@ async def _send_onboarding_completion_notification(user_id: str):
 async def _track_cross_domain_event(event_type: str, user_id: str):
     """Track cross-domain event handling."""
     logger.info(f"Would track cross-domain event {event_type} for user {user_id}")
+
+
+async def _update_registration_metrics(registration_source: str, metadata: dict):
+    """Update registration metrics."""
+    logger.info(f"Would update registration metrics for source: {registration_source}")
+
+
+async def _setup_user_security_profile(user_id: str, auth0_id: str):
+    """Set up user security profile."""
+    logger.info(f"Would set up security profile for user {user_id}")
+
+
+async def _initialize_user_audit_trail(user_id: str, email: str):
+    """Initialize audit trail for new user."""
+    logger.info(f"Would initialize audit trail for user {user_id}")

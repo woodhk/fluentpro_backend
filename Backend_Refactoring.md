@@ -28,21 +28,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   **Goal:** Enhance the existing event bus with Redis Streams for reliable event processing and add event sourcing capabilities.
 
-  **Step 2: Enhance event definitions and add new events**
-  
-  **Actions:**
-  1. Review and enhance existing user_registered and onboarding_completed events
-  2. Add scenario_generation_requested event for AI workflows
-  3. Ensure all events extend base_event properly
-  
-  **Files to examine and potentially modify:**
-  - `domains/authentication/events/user_events.py` (verify UserRegistered event)
-  - `domains/onboarding/events/session_events.py` (verify OnboardingCompleted event)
-  
-  **Files to create:**
-  - `domains/onboarding/events/scenario_events.py` (ScenarioGenerationRequested event)
-  
-  **Verification:** All events serialize/deserialize correctly and have proper event_type
 
   **Step 3: Implement event handlers for cross-domain communication**
   

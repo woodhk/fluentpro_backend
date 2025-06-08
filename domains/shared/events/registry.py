@@ -32,6 +32,9 @@ class EventHandlerRegistry:
             # Register onboarding event handlers
             self._register_onboarding_handlers()
             
+            # Register cross-domain event handlers
+            self._register_cross_domain_handlers()
+            
             self._registered = True
             logger.info("All domain event handlers registered successfully")
             
@@ -80,6 +83,17 @@ class EventHandlerRegistry:
         event_bus.subscribe("onboarding.personalization_complete", onboarding_handlers.handle_personalization_complete)
         
         logger.info("Onboarding event handlers registered")
+    
+    def _register_cross_domain_handlers(self):
+        """Register cross-domain event handlers for inter-domain communication."""
+        
+        # Authentication domain handlers for events from other domains
+        event_bus.subscribe("onboarding.session_completed", auth_handlers.handle_onboarding_completed)
+        
+        # Onboarding domain handlers for events from other domains
+        event_bus.subscribe("user.registered", onboarding_handlers.handle_user_registered)
+        
+        logger.info("Cross-domain event handlers registered")
     
     def get_registered_handlers(self) -> Dict[str, List[Callable]]:
         """Get all registered handlers by event type."""
