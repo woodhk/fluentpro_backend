@@ -1,14 +1,19 @@
-# Fluentpro Backend
+# FluentPro Backend
 
-A Django REST API backend for the Fluentpro iOS application, featuring Auth0 authentication and Supabase data storage.
+A scalable Django REST API backend for the FluentPro language learning platform, featuring modern architecture, comprehensive authentication, and production-ready deployment.
 
 ## Features
 
-- 🔐 **Auth0 Integration**: Secure JWT-based authentication
-- 💾 **Supabase Database**: Cloud-hosted PostgreSQL database
-- 🌐 **REST API**: RESTful endpoints for user management
-- 🔒 **CORS Support**: Configured for iOS app integration
-- 📱 **Mobile-Ready**: Optimized for mobile app backends
+- 🏗️ **Domain-Driven Design**: Clean architecture with separated business domains
+- 🔐 **Auth0 Integration**: Secure JWT-based authentication and authorization
+- 💾 **Multi-Database Support**: PostgreSQL for production, SQLite for development
+- 🚀 **Async-First Architecture**: Celery workers, WebSocket support, and event-driven patterns
+- 🌐 **RESTful API**: Comprehensive API with versioning and documentation
+- 🐳 **Containerized Deployment**: Docker and Docker Compose for all environments
+- 📊 **Monitoring & Observability**: Health checks, metrics, logging, and tracing
+- 🧪 **Comprehensive Testing**: Unit, integration, and E2E test coverage
+- 🔄 **CI/CD Pipeline**: Automated testing, security scanning, and deployment
+- 🔒 **Security First**: Environment-specific configurations and security hardening
 
 ## API Endpoints
 
@@ -200,34 +205,44 @@ All endpoints may return error responses in the following format:
 }
 ```
 
-## Local Development
+## Quick Start
 
 ### Prerequisites
 
-- Python 3.8+
-- pip
-- Virtual environment
+- **Docker & Docker Compose** (recommended)
+- **Python 3.11+** (for local development)
+- **Git** for version control
 
-### Setup
+### 🚀 Get Running in 30 Seconds
 
-1. Clone the repository
-2. Create and activate virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/your-org/fluentpro_backend.git
+cd fluentpro_backend
 
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+# Start all services with Docker
+docker-compose up -d
 
-4. Create `.env` file based on `.env.example`
-5. Configure Auth0 and Supabase credentials
-6. Run the development server:
-   ```bash
-   python manage.py runserver
-   ```
+# Run initial setup
+docker-compose exec web python manage.py migrate
+docker-compose exec web python manage.py createsuperuser
+
+# Access the application
+open http://localhost:8000
+```
+
+### 🎯 What You Get
+
+- **API Server**: http://localhost:8000/
+- **Admin Interface**: http://localhost:8000/admin/
+- **API Documentation**: http://localhost:8000/api/docs/
+- **Celery Monitor**: http://localhost:5555/
+
+### 📖 Complete Setup Guide
+
+For detailed setup instructions, environment configuration, and troubleshooting:
+
+👉 **[Environment Setup Guide](docs/development/environment_setup.md)**
 
 ### Validation Rules
 
@@ -249,6 +264,127 @@ All endpoints may return error responses in the following format:
 4. **Token Refresh**: Use refresh token to get new access token when expired
 5. **Logout**: Revoke refresh token in Auth0
 
-## Production Deployment
+## Architecture
 
-See `DEPLOYMENT.md` for detailed deployment instructions.# fluentpro_backend
+This project follows Domain-Driven Design (DDD) principles with a clean, scalable architecture:
+
+```
+fluentpro_backend/
+├── api/                    # API layer (views, serializers, routing)
+├── application/            # Application services and containers
+├── authentication/        # Authentication domain
+├── config/                 # Django settings and configuration
+├── core/                   # Shared utilities and base classes
+├── domains/                # Business domains
+│   ├── authentication/    # User authentication and authorization
+│   ├── onboarding/        # User onboarding workflows  
+│   └── shared/            # Shared domain models and events
+├── infrastructure/        # External integrations and persistence
+├── workers/               # Background task processing
+└── docs/                  # Comprehensive documentation
+```
+
+## Documentation
+
+### 📚 Complete Documentation
+
+- **[Environment Setup](docs/development/environment_setup.md)** - Complete local development setup
+- **[Deployment Guide](docs/development/deployment.md)** - Staging and production deployment
+- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
+- **[Architecture Decisions](docs/architecture/decisions/)** - Technical decisions and rationale
+- **[API Documentation](docs/api/)** - API versioning and style guide
+
+### 🚀 Development Workflows
+
+```bash
+# Run tests
+docker-compose exec web python -m pytest
+
+# Code formatting
+docker-compose exec web black .
+docker-compose exec web isort .
+
+# Type checking  
+docker-compose exec web mypy .
+
+# Database migrations
+docker-compose exec web python manage.py makemigrations
+docker-compose exec web python manage.py migrate
+
+# Access shell
+docker-compose exec web python manage.py shell
+```
+
+### 🔧 Common Commands
+
+```bash
+# View logs
+docker-compose logs -f web
+
+# Restart services
+docker-compose restart
+
+# Clean reset
+docker-compose down -v && docker-compose up -d
+
+# Production deployment
+docker-compose -f docker/docker-compose.prod.yml up -d
+```
+
+## Testing
+
+```bash
+# Run all tests
+docker-compose exec web python -m pytest
+
+# Run with coverage
+docker-compose exec web python -m pytest --cov=. --cov-report=html
+
+# Run specific test categories
+docker-compose exec web python -m pytest tests/unit/
+docker-compose exec web python -m pytest tests/integration/
+docker-compose exec web python -m pytest tests/e2e/
+```
+
+## Deployment
+
+### Development
+```bash
+docker-compose up -d
+```
+
+### Staging
+```bash
+docker-compose -f docker/docker-compose.prod.yml --env-file .env.staging up -d
+```
+
+### Production
+Automated via GitHub Actions on push to `main` branch.
+
+**👉 [Complete Deployment Guide](docs/development/deployment.md)**
+
+## Getting Help
+
+- **📖 Documentation**: Check the [docs/](docs/) directory
+- **🐛 Issues**: Review [troubleshooting guide](docs/troubleshooting.md)
+- **💬 Team**: Slack channel `#fluentpro-backend`
+- **🚨 Emergencies**: See [troubleshooting guide](docs/troubleshooting.md#emergency-procedures)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Follow the [environment setup guide](docs/development/environment_setup.md)
+4. Make your changes and add tests
+5. Run the test suite: `docker-compose exec web python -m pytest`
+6. Submit a pull request
+
+## License
+
+This project is proprietary to FluentPro. All rights reserved.
+
+---
+
+**Version**: 1.0.0  
+**Last Updated**: June 2025  
+**Maintainer**: FluentPro Development Team
