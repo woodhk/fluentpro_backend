@@ -27,6 +27,13 @@ configure_structlog(
     json_format=config('JSON_LOGS', default=True, cast=bool)
 )
 
+# Import environment validation (will auto-validate on import)
+try:
+    from .validation import validate_environment_settings
+except ImportError:
+    # Gracefully handle missing validation in case of dependency issues
+    pass
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
