@@ -1,0 +1,12 @@
+"""{{ domain_name }} repository interfaces"""
+from abc import ABC, abstractmethod
+from core.patterns.repository import IRepository
+from typing import Optional
+
+# TODO: Import domain models
+
+class I{{ domain_name.title() }}Repository(IRepository[{{ domain_name.title() }}, str]):
+    """Repository interface for {{ domain_name }} aggregate"""
+    
+    # TODO: Add domain-specific query methods
+    pass

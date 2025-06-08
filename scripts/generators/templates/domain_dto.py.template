@@ -1,0 +1,13 @@
+"""{{ domain_name }} DTOs for request/response"""
+from pydantic import BaseModel
+from typing import Optional
+
+class {{ domain_name.title() }}Request(BaseModel):
+    """Base request DTO for {{ domain_name }} domain"""
+    # TODO: Add request fields
+    pass
+
+class {{ domain_name.title() }}Response(BaseModel):
+    """Base response DTO for {{ domain_name }} domain"""
+    # TODO: Add response fields
+    pass
