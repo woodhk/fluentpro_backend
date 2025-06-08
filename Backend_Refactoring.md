@@ -8,19 +8,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   **Goal:** Implement comprehensive observability with structured logging, metrics, and distributed tracing.
 
-  **Step 3: Create comprehensive logging middleware**
-  
-  **Actions:**
-  1. Create request/response logging middleware
-  2. Add performance timing logs
-  3. Log authentication and authorization events
-  
-  **Files to create:**
-  - `application/middleware/logging_middleware.py` (request/response logging)
-  - `application/middleware/auth_logging.py` (auth event logging)
-  
-  **Verification:** All API requests logged with timing and user context
-
   **Step 4: Add application performance metrics collection**
   
   **Actions:**
