@@ -8,18 +8,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   **Goal:** Implement comprehensive observability with structured logging, metrics, and distributed tracing.
 
-  **Step 4: Add application performance metrics collection**
-  
-  **Actions:**
-  1. Implement metrics collection infrastructure
-  2. Add custom business metrics
-  3. Create performance monitoring
-  
-  **Files to create:**
-  - `infrastructure/monitoring/metrics.py` (metrics collection)
-  - `infrastructure/monitoring/performance.py` (performance monitoring)
-  
-  **Verification:** Metrics collected for response times, error rates, business KPIs
 
   **Step 5: Integrate distributed tracing and monitoring**
   
