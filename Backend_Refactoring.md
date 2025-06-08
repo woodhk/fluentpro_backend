@@ -8,22 +8,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   **Goal:** Establish comprehensive testing infrastructure with proper fixtures, mocks, and coverage reporting.
 
-  **Step 4: Add comprehensive pytest configuration**
-  
-  **Actions:**
-  1. Create pytest.ini with proper settings
-  2. Enhance tests/conftest.py with async support
-  3. Add test environment configuration
-  
-  **Files to create:**
-  - `pytest.ini` (pytest configuration)
-  
-  **Files to modify:**
-  - `tests/conftest.py` (add async test support, database fixtures)
-  - `config/settings/testing.py` (test-specific settings)
-  
-  **Verification:** pytest runs with proper async support and test database
-
   **Step 5: Implement code coverage reporting with 80% target**
   
   **Actions:**

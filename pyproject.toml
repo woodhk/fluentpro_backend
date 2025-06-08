@@ -49,3 +49,54 @@ dependencies = []
 where = ["."]
 include = ["*"]
 exclude = ["venv*", "env*", "tests*"]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "venv/*",
+    "env/*", 
+    ".venv/*",
+    "tests/*",
+    "**/test_*.py",
+    "**/*_test.py", 
+    "**/tests.py",
+    "**/migrations/*",
+    "manage.py",
+    "setup.py",
+    "wsgi.py",
+    "asgi.py",
+    "**/settings/*",
+    "**/__init__.py",
+    "scripts/*",
+    "**/vendor/*",
+    "docs/*",
+    "build/*",
+    "dist/*",
+    "*.egg-info/*",
+    "Dockerfile*",
+    "docker-compose*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self\\.debug",
+    "raise AssertionError", 
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "@(abc\\.)?abstractmethod",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\."
+]
+show_missing = true
+fail_under = 80
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+title = "FluentPro Backend Coverage Report"
+
+[tool.coverage.xml]
+output = "coverage.xml"
