@@ -8,26 +8,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
 
   **Goal:** Implement comprehensive observability with structured logging, metrics, and distributed tracing.
 
-
-  **Step 2: Add request correlation IDs for tracing**
-  
-  **Actions:**
-  1. Create application/middleware/ directory
-  2. Implement correlation ID middleware
-  3. Add correlation ID to all log entries
-  
-  **Files to create:**
-  - `application/middleware/__init__.py`
-  - `application/middleware/correlation_id.py` (correlation ID injection)
-  
-  **Files to modify:**
-  - `config/settings/base.py` (add middleware to MIDDLEWARE list)
-  
-  **Before:** No request tracing across services
-  **After:** Each request has unique ID traceable through logs
-  
-  **Verification:** All logs for a request contain the same correlation ID
-
   **Step 3: Create comprehensive logging middleware**
   
   **Actions:**
