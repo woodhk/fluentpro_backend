@@ -1,4 +1,6 @@
-from django.http import HttpRequest
+from django.http import HttpRequest, JsonResponse
+from pydantic import ValidationError
+import json
 import re
 
 class APIVersionMiddleware:
@@ -31,4 +33,29 @@ class APIVersionMiddleware:
         if hasattr(request, 'api_version'):
             response['X-API-Version'] = request.api_version
         
+        return response
+
+
+class DTOValidationMiddleware:
+    """Automatically validate request bodies against DTOs"""
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        # Only process JSON requests
+        if request.content_type == 'application/json' and request.body:
+            try:
+                # Parse JSON body
+                request.json = json.loads(request.body)
+            except json.JSONDecodeError as e:
+                return JsonResponse({
+                    "error": {
+                        "code": "INVALID_JSON",
+                        "message": "Invalid JSON in request body",
+                        "details": [{"error": str(e)}]
+                    }
+                }, status=400)
+        
+        response = self.get_response(request)
         return response
