@@ -34,28 +34,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - Empty domains/*/tasks/ directories
   - Basic Redis cache configuration in settings.py
 
-  **Step 1: Create environment-specific requirements structure**
-  
-  **Actions:**
-  1. Create `requirements/` directory
-  2. Split requirements.txt into environment-specific files
-  3. Add Celery dependencies
-  
-  **Before:**
-  ```
-  requirements.txt (single file with all dependencies)
-  ```
-  
-  **After:**
-  ```
-  requirements/
-  ├── base.txt (core dependencies)
-  ├── development.txt (dev dependencies)
-  ├── production.txt (prod dependencies)
-  └── testing.txt (test dependencies)
-  ```
-  
-  **Verification:** Run `pip install -r requirements/development.txt` successfully
 
   **Step 2: Set up Celery application structure**
   
