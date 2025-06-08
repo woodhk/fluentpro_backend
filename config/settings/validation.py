@@ -253,8 +253,13 @@ def validate_environment_settings(environment: str = None) -> Dict[str, Any]:
 # Auto-validate on import (can be disabled with SKIP_SETTINGS_VALIDATION=True)
 if not config('SKIP_SETTINGS_VALIDATION', default=False, cast=bool):
     try:
-        validate_environment_settings()
+        # Determine environment from DJANGO_SETTINGS_MODULE
+        settings_module = config('DJANGO_SETTINGS_MODULE', default='config.settings.development')
+        environment = settings_module.split('.')[-1]
+        
+        validate_environment_settings(environment)
     except SettingsValidationError as e:
         print(f"❌ {str(e)}")
-        if config('DJANGO_SETTINGS_MODULE', default='').endswith('production'):
+        # Fail fast for production and staging environments
+        if environment in ['production', 'staging']:
             sys.exit(1)
