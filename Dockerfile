@@ -8,24 +8,31 @@ ENV PYTHONUNBUFFERED=1
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including curl for health checks
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy requirements files
+COPY requirements/ requirements/
+
+# Install Python dependencies (development by default, can be overridden)
+ARG REQUIREMENTS_FILE=requirements/development.txt
+RUN pip install --no-cache-dir -r ${REQUIREMENTS_FILE}
 
 # Copy project
 COPY . .
 
+# Create directory for Celery beat schedule
+RUN mkdir -p /app/celerybeat
+
 # Collect static files (if needed)
 RUN python manage.py collectstatic --noinput || true
 
-# Expose port
-EXPOSE 8000
+# Expose ports for Django (8000), Flower (5555)
+EXPOSE 8000 5555
 
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "fluentpro_backend.fluentpro_backend.wsgi:application"]
+# Default command (can be overridden in docker-compose)
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

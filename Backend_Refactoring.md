@@ -34,32 +34,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - Empty domains/*/tasks/ directories
   - Basic Redis cache configuration in settings.py
 
-
-  **Step 3: Implement base task classes with retry logic**
-  
-  **Actions:**
-  1. Create BaseTask class in workers/tasks/base_task.py
-  2. Enhance application/decorators/retry.py for Celery integration
-  3. Add error handling and logging
-  
-  **Before:** Empty task directories
-  **After:** Base task class with retry, error handling, and logging
-  
-  **Verification:** Create simple test task and verify retry behavior
-
-  **Step 4: Create domain-specific task implementations**
-  
-  **Actions:**
-  1. Implement welcome email task in domains/authentication/tasks/
-  2. Implement recommendation generation task in domains/onboarding/tasks/
-  3. Register tasks with Celery app
-  
-  **Files to modify:**
-  - `domains/authentication/tasks/send_welcome_email.py` (create)
-  - `domains/onboarding/tasks/generate_recommendations.py` (create)
-  
-  **Verification:** Tasks appear in `celery -A workers.celery_app inspect registered`
-
   **Step 5: Add task monitoring with Flower and Docker setup**
   
   **Actions:**

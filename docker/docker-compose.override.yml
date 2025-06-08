@@ -1,0 +1,42 @@
+version: '3.8'
+
+# Development overrides for docker-compose.yml
+services:
+  celery_worker:
+    environment:
+      - DEBUG=True
+      - CELERY_TASK_ALWAYS_EAGER=False
+      - CELERY_TASK_EAGER_PROPAGATES=False
+    volumes:
+      - ..:/app
+      - /app/__pycache__
+    command: celery -A workers.celery_app worker --loglevel=debug --concurrency=1 --pool=solo
+    
+  celery_beat:
+    environment:
+      - DEBUG=True
+    volumes:
+      - ..:/app
+      - /app/__pycache__
+    
+  flower:
+    environment:
+      - DEBUG=True
+      - FLOWER_DEBUG=True
+      - FLOWER_BASIC_AUTH=admin:dev123
+      - FLOWER_URL_PREFIX=
+    volumes:
+      - ..:/app
+      - /app/__pycache__
+    command: >
+      celery -A workers.celery_app flower 
+      --port=5555 
+      --broker=redis://redis:6379/0
+      --auto_refresh=True
+      --max_workers=10
+      --enable_events=True
+
+  redis:
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    environment:
+      - REDIS_REPLICATION_MODE=master
