@@ -35,20 +35,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - No Django Channels dependency
 
 
-  **Step 4: Add connection management infrastructure**
-  
-  **Actions:**
-  1. Create connection manager for tracking active connections
-  2. Add user session management
-  3. Implement connection state persistence
-  
-  **Files to create:**
-  - `infrastructure/messaging/websocket/__init__.py`
-  - `infrastructure/messaging/websocket/connection_manager.py` (connection tracking)
-  - `infrastructure/messaging/websocket/session_manager.py` (WebSocket sessions)
-  
-  **Verification:** Multiple connections per user tracked correctly
-
   **Step 5: Integrate WebSocket routing with main ASGI application**
   
   **Actions:**
