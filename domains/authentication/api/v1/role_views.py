@@ -6,8 +6,10 @@ Handles job input, role matching, and role creation workflows.
 from rest_framework import status
 import logging
 
+from api.common.responses import APIResponse
+from api.common.documentation import document_endpoint
+from authentication.backends import Auth0JWTAuthentication
 from core.view_base import AuthenticatedView, VersionedView, CachedView
-from core.responses import APIResponse
 from core.exceptions import ValidationError, BusinessLogicError
 from authentication.business.user_manager import UserManager
 from authentication.business.role_manager import RoleManager
@@ -21,7 +23,12 @@ class JobInputView(AuthenticatedView, VersionedView):
     Job input and role matching endpoint.
     Phase 2 Step 1: User inputs job description and gets role matches.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Job Input and Role Matching",
+        description="Process job description and return matching roles"
+    )
     def post(self, request):
         """Process job input and return role matches."""
         try:
@@ -56,6 +63,7 @@ class JobInputView(AuthenticatedView, VersionedView):
                     logger.error("No Auth0 user ID found")
                     return APIResponse.error(
                         message="Authentication required",
+                        code="AUTH_REQUIRED",
                         status_code=status.HTTP_401_UNAUTHORIZED
                     )
                 
@@ -66,6 +74,7 @@ class JobInputView(AuthenticatedView, VersionedView):
                 logger.error(f"Authentication error - missing user attributes: {str(e)}")
                 return APIResponse.error(
                     message="Invalid authentication token",
+                    code="INVALID_TOKEN",
                     status_code=status.HTTP_401_UNAUTHORIZED
                 )
             except Exception as e:
@@ -77,6 +86,7 @@ class JobInputView(AuthenticatedView, VersionedView):
                 logger.error("User profile not found")
                 return APIResponse.error(
                     message="User not found",
+                    code="USER_NOT_FOUND",
                     status_code=status.HTTP_404_NOT_FOUND
                 )
             
@@ -173,7 +183,7 @@ class JobInputView(AuthenticatedView, VersionedView):
             logger.error(f"Traceback: {traceback.format_exc()}")
             return APIResponse.error(
                 message="Job input processing failed",
-                details=str(e),
+                code="JOB_INPUT_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -183,7 +193,12 @@ class RoleSelectionView(AuthenticatedView, VersionedView):
     Role selection endpoint.
     Phase 2 Step 1: User selects a role from matches.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Role Selection",
+        description="Select a role from matched results"
+    )
     def post(self, request):
         """Handle role selection."""
         try:
@@ -234,7 +249,7 @@ class RoleSelectionView(AuthenticatedView, VersionedView):
             logger.error(f"Role selection error: {str(e)}")
             return APIResponse.error(
                 message="Role selection failed",
-                details=str(e),
+                code="ROLE_SELECTION_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -244,7 +259,12 @@ class NewRoleCreationView(AuthenticatedView, VersionedView):
     New role creation endpoint.
     Phase 2 Step 2: Create new role when user rejects all matches.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Create New Role",
+        description="Create a new custom role when no matches are suitable"
+    )
     def post(self, request):
         """Handle new role creation."""
         try:
@@ -271,6 +291,7 @@ class NewRoleCreationView(AuthenticatedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
+                    code="USER_NOT_FOUND",
                     status_code=status.HTTP_404_NOT_FOUND
                 )
             
@@ -333,7 +354,7 @@ class NewRoleCreationView(AuthenticatedView, VersionedView):
             logger.error(f"New role creation error: {str(e)}")
             return APIResponse.error(
                 message="New role creation failed",
-                details=str(e),
+                code="ROLE_CREATION_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -343,8 +364,13 @@ class RoleSearchView(CachedView, VersionedView):
     Role search endpoint with caching.
     Provides search functionality for roles.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     cache_timeout = 300  # 5 minutes cache
     
+    @document_endpoint(
+        summary="Search Roles",
+        description="Search for roles by query and industry filter"
+    )
     def get(self, request):
         """Search for roles."""
         try:
@@ -399,6 +425,6 @@ class RoleSearchView(CachedView, VersionedView):
             logger.error(f"Role search error: {str(e)}")
             return APIResponse.error(
                 message="Role search failed",
-                details=str(e),
+                code="ROLE_SEARCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

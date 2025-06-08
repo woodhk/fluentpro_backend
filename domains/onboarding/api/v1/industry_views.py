@@ -9,8 +9,10 @@ from datetime import timedelta
 import logging
 
 from api.common.base_views import BaseAPIView
+from api.common.responses import APIResponse
+from api.common.documentation import document_endpoint
+from authentication.backends import Auth0JWTAuthentication
 from core.view_base import AuthenticatedView, VersionedView, CachedView
-from core.responses import APIResponse
 from core.exceptions import ValidationError
 from authentication.business.user_manager import UserManager
 from application.container import container
@@ -25,11 +27,18 @@ class SetIndustryView(BaseAPIView, AuthenticatedView, VersionedView):
     Set user's industry endpoint.
     Phase 1 onboarding step.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.select_user_industry = container.onboarding_use_cases.select_user_industry()
-    
+    @document_endpoint(
+        summary="Set User Industry",
+        description="Set user's industry during onboarding",
+        request_examples=[{
+            "name": "Valid Industry Selection",
+            "value": {
+                "industry_id": "123e4567-e89b-12d3-a456-426614174000"
+            }
+        }]
+    )
     @validate_input(UserIndustryRequest)
     @audit_log(action="set_industry", resource_type="onboarding")
     def post(self, request, **validated_data):
@@ -40,9 +49,10 @@ class SetIndustryView(BaseAPIView, AuthenticatedView, VersionedView):
         try:
             auth0_id = self.get_auth0_user_id()
         except Exception as e:
-            return Response(
-                {"error": "Authentication required"},
-                status=status.HTTP_401_UNAUTHORIZED
+            return APIResponse.error(
+                message="Authentication required",
+                code="AUTH_REQUIRED",
+                status_code=status.HTTP_401_UNAUTHORIZED
             )
         
         # Execute use case
@@ -62,6 +72,10 @@ class GetAvailableIndustriesView(CachedView, VersionedView):
     """
     cache_timeout = 1800  # 30 minutes cache
     
+    @document_endpoint(
+        summary="Get Available Industries",
+        description="Retrieve list of selectable industries"
+    )
     def get(self, request):
         """Get available industries."""
         try:
@@ -87,6 +101,6 @@ class GetAvailableIndustriesView(CachedView, VersionedView):
             logger.error(f"Get available industries error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get available industries",
-                details=str(e),
+                code="INDUSTRIES_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

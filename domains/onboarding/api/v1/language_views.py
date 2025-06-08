@@ -9,8 +9,10 @@ from datetime import timedelta
 import logging
 
 from api.common.base_views import BaseAPIView
+from api.common.responses import APIResponse
+from api.common.documentation import document_endpoint
+from authentication.backends import Auth0JWTAuthentication
 from core.view_base import AuthenticatedView, VersionedView, CachedView
-from core.responses import APIResponse
 from core.exceptions import ValidationError
 from authentication.business.user_manager import UserManager
 from authentication.models.user import NativeLanguage
@@ -26,11 +28,18 @@ class SetNativeLanguageView(BaseAPIView, AuthenticatedView, VersionedView):
     Set user's native language endpoint.
     Phase 1 onboarding step.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.select_native_language = container.onboarding_use_cases.select_native_language()
-    
+    @document_endpoint(
+        summary="Set Native Language",
+        description="Set user's native language during onboarding",
+        request_examples=[{
+            "name": "Valid Language Selection",
+            "value": {
+                "native_language": "english"
+            }
+        }]
+    )
     @validate_input(NativeLanguageRequest)
     @audit_log(action="set_native_language", resource_type="onboarding")
     def post(self, request, **validated_data):
@@ -41,9 +50,10 @@ class SetNativeLanguageView(BaseAPIView, AuthenticatedView, VersionedView):
         try:
             auth0_id = self.get_auth0_user_id()
         except Exception as e:
-            return Response(
-                {"error": "Authentication required"},
-                status=status.HTTP_401_UNAUTHORIZED
+            return APIResponse.error(
+                message="Authentication required",
+                code="AUTH_REQUIRED",
+                status_code=status.HTTP_401_UNAUTHORIZED
             )
         
         # Execute use case
@@ -61,6 +71,10 @@ class GetAvailableLanguagesView(CachedView, VersionedView):
     """
     cache_timeout = 3600  # 1 hour cache (rarely changes)
     
+    @document_endpoint(
+        summary="Get Available Languages",
+        description="Retrieve list of supported native languages"
+    )
     @cache(key_prefix="available_languages", ttl=timedelta(hours=1))
     def get(self, request):
         """Get available native languages."""
@@ -81,6 +95,6 @@ class GetAvailableLanguagesView(CachedView, VersionedView):
             logger.error(f"Get available languages error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get available languages",
-                details=str(e),
+                code="LANGUAGES_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

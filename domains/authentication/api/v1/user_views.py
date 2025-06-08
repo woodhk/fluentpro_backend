@@ -7,8 +7,11 @@ from rest_framework import status
 from datetime import timedelta
 import logging
 
+from api.common.responses import APIResponse
+from api.common.documentation import document_endpoint
+from authentication.backends import Auth0JWTAuthentication
 from core.view_base import AuthenticatedView, VersionedView, CachedView
-from core.responses import APIResponse
+from domains.authentication.dto.mappers import user_mapper
 from authentication.business.user_manager import UserManager
 from application.decorators import cache, audit_log
 
@@ -20,8 +23,13 @@ class UserProfileView(CachedView, VersionedView):
     User profile endpoint with caching support.
     Returns current user's profile information.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     cache_timeout = 600  # 10 minutes cache
     
+    @document_endpoint(
+        summary="Get User Profile",
+        description="Retrieve detailed user profile information"
+    )
     @cache(key_prefix="user_profile", ttl=timedelta(minutes=15))
     def get(self, request):
         """Get current user profile."""
@@ -35,6 +43,7 @@ class UserProfileView(CachedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
+                    code="USER_NOT_FOUND",
                     status_code=status.HTTP_404_NOT_FOUND
                 )
             
@@ -64,10 +73,14 @@ class UserProfileView(CachedView, VersionedView):
             logger.error(f"User profile error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get user profile",
-                details=str(e),
+                code="PROFILE_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @document_endpoint(
+        summary="Update User Profile",
+        description="Update user profile information (partial update)"
+    )
     @audit_log(action="profile_update", resource_type="user")
     def patch(self, request):
         """Update user profile (partial update)."""
@@ -111,7 +124,7 @@ class UserProfileView(CachedView, VersionedView):
             logger.error(f"User profile update error: {str(e)}")
             return APIResponse.error(
                 message="Failed to update user profile",
-                details=str(e),
+                code="PROFILE_UPDATE_ERROR",
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
@@ -121,7 +134,12 @@ class UserSettingsView(AuthenticatedView, VersionedView):
     User settings management endpoint.
     Handles user preferences and configuration.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Get User Settings",
+        description="Retrieve user preferences and configuration"
+    )
     def get(self, request):
         """Get user settings."""
         try:
@@ -148,10 +166,14 @@ class UserSettingsView(AuthenticatedView, VersionedView):
             logger.error(f"User settings error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get user settings",
-                details=str(e),
+                code="SETTINGS_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @document_endpoint(
+        summary="Update User Settings",
+        description="Update user preferences and configuration"
+    )
     def patch(self, request):
         """Update user settings."""
         try:
@@ -166,7 +188,7 @@ class UserSettingsView(AuthenticatedView, VersionedView):
             logger.error(f"User settings update error: {str(e)}")
             return APIResponse.error(
                 message="Failed to update user settings",
-                details=str(e),
+                code="SETTINGS_UPDATE_ERROR",
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
@@ -176,7 +198,12 @@ class UserDeactivateView(AuthenticatedView, VersionedView):
     User account deactivation endpoint.
     Handles account deletion/deactivation.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Deactivate User Account",
+        description="Deactivate the current user account"
+    )
     @audit_log(action="account_deactivation", resource_type="user")
     def post(self, request):
         """Deactivate user account."""
@@ -195,6 +222,6 @@ class UserDeactivateView(AuthenticatedView, VersionedView):
             logger.error(f"User deactivation error: {str(e)}")
             return APIResponse.error(
                 message="Failed to deactivate account",
-                details=str(e),
+                code="DEACTIVATION_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

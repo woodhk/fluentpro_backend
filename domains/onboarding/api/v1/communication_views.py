@@ -7,8 +7,10 @@ from rest_framework import status
 from datetime import timedelta
 import logging
 
+from api.common.responses import APIResponse
+from api.common.documentation import document_endpoint
+from authentication.backends import Auth0JWTAuthentication
 from core.view_base import AuthenticatedView, VersionedView, CachedView
-from core.responses import APIResponse
 from core.exceptions import ValidationError
 from onboarding.business.communication_manager import CommunicationManager
 from application.decorators import cache
@@ -23,6 +25,10 @@ class GetCommunicationPartnersView(CachedView, VersionedView):
     """
     cache_timeout = 1800  # 30 minutes cache
     
+    @document_endpoint(
+        summary="Get Communication Partners",
+        description="Retrieve available communication partners for selection"
+    )
     @cache(key_prefix="communication_partners", ttl=timedelta(minutes=30))
     def get(self, request):
         """Get available communication partners."""
@@ -55,7 +61,7 @@ class GetCommunicationPartnersView(CachedView, VersionedView):
             logger.error(f"Get communication partners error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get communication partners",
-                details=str(e),
+                code="PARTNERS_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -65,7 +71,12 @@ class SelectCommunicationPartnersView(AuthenticatedView, VersionedView):
     Select communication partners endpoint.
     Phase 2 Step 1: User selects their communication partners.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Select Communication Partners",
+        description="Select communication partners for user"
+    )
     def post(self, request):
         """Select communication partners."""
         try:
@@ -110,7 +121,7 @@ class SelectCommunicationPartnersView(AuthenticatedView, VersionedView):
             logger.error(f"Select communication partners error: {str(e)}")
             return APIResponse.error(
                 message="Failed to select communication partners",
-                details=str(e),
+                code="PARTNER_SELECTION_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -120,7 +131,12 @@ class GetUserCommunicationPartnersView(AuthenticatedView, VersionedView):
     Get user's selected communication partners endpoint.
     Returns user's selected partners for unit selection flow.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Get User Communication Partners",
+        description="Retrieve user's selected communication partners"
+    )
     def get(self, request):
         """Get user's selected communication partners."""
         try:
@@ -150,7 +166,7 @@ class GetUserCommunicationPartnersView(AuthenticatedView, VersionedView):
             logger.error(f"Get user communication partners error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get user communication partners",
-                details=str(e),
+                code="USER_PARTNERS_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -162,6 +178,10 @@ class GetUnitsForPartnerView(CachedView, VersionedView):
     """
     cache_timeout = 1800  # 30 minutes cache
     
+    @document_endpoint(
+        summary="Get Units for Partner",
+        description="Retrieve available units for a specific communication partner"
+    )
     def get(self, request, partner_id):
         """Get available units for a communication partner."""
         try:
@@ -215,7 +235,7 @@ class GetUnitsForPartnerView(CachedView, VersionedView):
             logger.error(f"Get units for partner error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get units for partner",
-                details=str(e),
+                code="UNITS_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -225,7 +245,12 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
     Select units for a specific communication partner.
     Phase 2 Step 2+: User selects units/situations for a partner.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Select Units for Partner",
+        description="Select units/situations for a specific communication partner"
+    )
     def post(self, request, partner_id):
         """Select units for a communication partner."""
         try:
@@ -259,6 +284,7 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
             if not any(p.communication_partner_id == partner_id for p in user_partners):
                 return APIResponse.error(
                     message="Partner not found in user's selected partners",
+                    code="PARTNER_NOT_FOUND",
                     status_code=status.HTTP_404_NOT_FOUND
                 )
             
@@ -301,7 +327,7 @@ class SelectUnitsForPartnerView(AuthenticatedView, VersionedView):
             logger.error(f"Select units for partner error: {str(e)}")
             return APIResponse.error(
                 message="Failed to select units for partner",
-                details=str(e),
+                code="UNIT_SELECTION_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -311,7 +337,12 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
     Get user's selected units for a specific communication partner.
     Returns user's unit selections for a partner.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Get User Units for Partner",
+        description="Retrieve user's selected units for a specific communication partner"
+    )
     def get(self, request, partner_id):
         """Get user's selected units for a communication partner."""
         try:
@@ -336,6 +367,7 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
             if not partner_selection:
                 return APIResponse.error(
                     message="Partner not found in user's selected partners",
+                    code="PARTNER_NOT_FOUND",
                     status_code=status.HTTP_404_NOT_FOUND
                 )
             
@@ -369,6 +401,6 @@ class GetUserUnitsForPartnerView(AuthenticatedView, VersionedView):
             logger.error(f"Get user units for partner error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get user units for partner",
-                details=str(e),
+                code="USER_UNITS_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

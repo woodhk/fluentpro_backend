@@ -6,8 +6,10 @@ Provides comprehensive onboarding status and data summary.
 from rest_framework import status
 import logging
 
+from api.common.responses import APIResponse
+from api.common.documentation import document_endpoint
+from authentication.backends import Auth0JWTAuthentication
 from core.view_base import AuthenticatedView, VersionedView, CachedView
-from core.responses import APIResponse
 from authentication.business.user_manager import UserManager
 from onboarding.business.communication_manager import CommunicationManager
 
@@ -19,8 +21,13 @@ class GetOnboardingSummaryView(CachedView, VersionedView):
     Get complete onboarding summary endpoint.
     Shows all selected partners, units, and onboarding progress.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     cache_timeout = 600  # 10 minutes cache
     
+    @document_endpoint(
+        summary="Get Onboarding Summary",
+        description="Retrieve complete onboarding summary with progress and selections"
+    )
     def get(self, request):
         """Get complete onboarding summary."""
         try:
@@ -40,6 +47,7 @@ class GetOnboardingSummaryView(CachedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
+                    code="USER_NOT_FOUND",
                     status_code=status.HTTP_404_NOT_FOUND
                 )
             
@@ -142,7 +150,7 @@ class GetOnboardingSummaryView(CachedView, VersionedView):
             logger.error(f"Get onboarding summary error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get onboarding summary",
-                details=str(e),
+                code="SUMMARY_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -152,7 +160,12 @@ class OnboardingProgressView(AuthenticatedView, VersionedView):
     Get onboarding progress endpoint.
     Returns current onboarding step and completion status.
     """
+    authentication_classes = [Auth0JWTAuthentication]
     
+    @document_endpoint(
+        summary="Get Onboarding Progress",
+        description="Retrieve current onboarding step and completion status"
+    )
     def get(self, request):
         """Get onboarding progress."""
         try:
@@ -165,6 +178,7 @@ class OnboardingProgressView(AuthenticatedView, VersionedView):
             if not user_profile:
                 return APIResponse.error(
                     message="User not found",
+                    code="USER_NOT_FOUND",
                     status_code=status.HTTP_404_NOT_FOUND
                 )
             
@@ -225,6 +239,6 @@ class OnboardingProgressView(AuthenticatedView, VersionedView):
             logger.error(f"Get onboarding progress error: {str(e)}")
             return APIResponse.error(
                 message="Failed to get onboarding progress",
-                details=str(e),
+                code="PROGRESS_FETCH_ERROR",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
