@@ -18,6 +18,21 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Autodiscover tasks in all Django apps
 app.autodiscover_tasks()
 
+# Import domain-specific tasks to ensure registration
+try:
+    # Import authentication tasks
+    from domains.authentication.tasks import send_welcome_email, send_password_reset_email
+    
+    # Import onboarding tasks  
+    from domains.onboarding.tasks import generate_user_recommendations, analyze_onboarding_completion
+    
+    # Import worker tasks
+    from workers.tasks import test_task
+    
+except ImportError as e:
+    # Tasks will be discovered during Django app loading
+    pass
+
 # Optional: Add debugging task
 @app.task(bind=True)
 def debug_task(self):
