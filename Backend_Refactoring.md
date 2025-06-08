@@ -35,22 +35,6 @@ Comprehensive Implementation Plan for FluentPro Backend Refactoring
   - Basic Redis cache configuration in settings.py
 
 
-  **Step 2: Set up Celery application structure**
-  
-  **Actions:**
-  1. Create `workers/` directory with Celery configuration
-  2. Configure Celery app with Redis broker
-  3. Add workers to Django settings
-  
-  **Files to create:**
-  - `workers/__init__.py`
-  - `workers/celery_app.py` (Celery app configuration)
-  - `workers/celery_config.py` (Celery settings)
-  - `workers/tasks/__init__.py`
-  - `workers/tasks/base_task.py` (base task class)
-  
-  **Verification:** Run `celery -A workers.celery_app worker --loglevel=info` without errors
-
   **Step 3: Implement base task classes with retry logic**
   
   **Actions:**
