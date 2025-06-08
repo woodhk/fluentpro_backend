@@ -14,6 +14,13 @@ from core.exceptions import (
     BusinessLogicError
 )
 
+# Async view support - import async base classes for enhanced functionality
+try:
+    from .async_views import AsyncAPIView, AsyncViewSet, AsyncPermission, AsyncAuthentication
+    ASYNC_VIEWS_AVAILABLE = True
+except ImportError:
+    ASYNC_VIEWS_AVAILABLE = False
+
 
 class BaseAPIView(APIView):
     """Base view with common error handling and use case execution."""

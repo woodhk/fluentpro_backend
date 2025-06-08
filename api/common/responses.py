@@ -1,8 +1,17 @@
 from rest_framework.response import Response
 from rest_framework import status
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Iterator, AsyncIterator, Union, Callable
 from datetime import datetime
 import uuid
+
+# Import streaming infrastructure
+from .streaming import (
+    StreamingJSONResponse,
+    AsyncJSONStreamer,
+    ProgressTracker,
+    stream_large_dataset,
+    stream_with_progress
+)
 
 class APIResponse:
     """Standardized API response builder"""
@@ -58,4 +67,129 @@ class APIResponse:
             code="VALIDATION_ERROR",
             details=errors,
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+        )
+    
+    @staticmethod
+    async def streaming_response(
+        data_source: Union[Iterator, AsyncIterator],
+        transform_func: Optional[Callable] = None,
+        chunk_size: int = 1000,
+        streaming_type: str = "array",
+        include_metadata: bool = True
+    ) -> StreamingJSONResponse:
+        """
+        Create streaming JSON response for large datasets.
+        
+        Args:
+            data_source: Iterator or async iterator yielding data items
+            transform_func: Optional function to transform each item
+            chunk_size: Number of items to process per chunk
+            streaming_type: 'array' for JSON array or 'objects' for NDJSON
+            include_metadata: Whether to include streaming metadata
+            
+        Returns:
+            StreamingJSONResponse for efficient data streaming
+        """
+        return await stream_large_dataset(
+            data_source=data_source,
+            transform_func=transform_func,
+            chunk_size=chunk_size,
+            streaming_type=streaming_type
+        )
+    
+    @staticmethod
+    async def streaming_response_with_progress(
+        data_source: Union[Iterator, AsyncIterator],
+        total_items: Optional[int] = None,
+        progress_callback: Optional[Callable] = None,
+        transform_func: Optional[Callable] = None,
+        chunk_size: int = 1000
+    ) -> tuple[StreamingJSONResponse, ProgressTracker]:
+        """
+        Create streaming response with progress tracking for long-running tasks.
+        
+        Args:
+            data_source: Iterator or async iterator yielding data items
+            total_items: Total number of items (if known) for progress calculation
+            progress_callback: Optional callback function for progress updates
+            transform_func: Optional function to transform each item
+            chunk_size: Number of items to process per chunk
+            
+        Returns:
+            Tuple of (StreamingJSONResponse, ProgressTracker)
+        """
+        tracker = ProgressTracker(total_items=total_items)
+        
+        async def tracked_data_source():
+            async for item in data_source:
+                tracker.update(1)
+                if progress_callback:
+                    await progress_callback(tracker.get_progress())
+                
+                if transform_func:
+                    item = transform_func(item)
+                
+                yield item
+        
+        response = await stream_large_dataset(
+            data_source=tracked_data_source(),
+            chunk_size=chunk_size
+        )
+        
+        return response, tracker
+    
+    @staticmethod
+    def streaming_array_response(
+        data_source: Union[Iterator, AsyncIterator],
+        transform_func: Optional[Callable] = None,
+        chunk_size: int = 1000,
+        headers: Optional[Dict[str, str]] = None
+    ) -> StreamingJSONResponse:
+        """
+        Create streaming response for JSON arrays (synchronous version).
+        
+        Args:
+            data_source: Iterator yielding data items
+            transform_func: Optional function to transform each item
+            chunk_size: Number of items to process per chunk
+            headers: Additional HTTP headers
+            
+        Returns:
+            StreamingJSONResponse with JSON array format
+        """
+        return StreamingJSONResponse(
+            data_source=data_source,
+            streaming_type="array",
+            transform_func=transform_func,
+            chunk_size=chunk_size,
+            headers=headers,
+            include_metadata=True
+        )
+    
+    @staticmethod
+    def streaming_objects_response(
+        data_source: Union[Iterator, AsyncIterator],
+        transform_func: Optional[Callable] = None,
+        chunk_size: int = 1000,
+        headers: Optional[Dict[str, str]] = None
+    ) -> StreamingJSONResponse:
+        """
+        Create streaming response for NDJSON objects (synchronous version).
+        
+        Args:
+            data_source: Iterator yielding data items
+            transform_func: Optional function to transform each item
+            chunk_size: Number of items to process per chunk
+            headers: Additional HTTP headers
+            
+        Returns:
+            StreamingJSONResponse with NDJSON format
+        """
+        return StreamingJSONResponse(
+            data_source=data_source,
+            streaming_type="objects",
+            transform_func=transform_func,
+            chunk_size=chunk_size,
+            headers=headers,
+            include_metadata=True
         )
