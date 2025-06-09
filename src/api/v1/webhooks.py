@@ -14,7 +14,7 @@ async def auth0_webhook(request: Request, db: Client = Depends(get_db)):
     try:
         payload = await request.json()
         event_type = payload.get("event")
-        user_data = payload.get("user", {})
+        user_data = payload.get("data", {})
         
         user_service = UserService(db)
         
