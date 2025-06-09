@@ -5,6 +5,7 @@ drf-spectacular==0.26.5
 drf-spectacular[sidecar]==0.26.5
 django-cors-headers==4.7.0
 python-decouple==3.8
+pydantic
 supabase==2.15.2
 python-jose[cryptography]==3.5.0
 requests==2.32.3
