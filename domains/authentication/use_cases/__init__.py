@@ -1,3 +1,0 @@
-"""
-Authentication domain use cases.
-"""

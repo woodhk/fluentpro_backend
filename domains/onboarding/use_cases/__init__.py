@@ -1,3 +1,0 @@
-"""
-Onboarding domain use cases.
-"""

@@ -1,8 +1,0 @@
-# Development dependencies
--r base.txt
-
-# Code quality and linting
-import-linter==2.0
-
-# Celery monitoring
-flower>=2.0.0
