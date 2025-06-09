@@ -32,6 +32,11 @@ class SupabaseUserRepository:
             if 'id' not in user_data:
                 user_data['id'] = str(uuid.uuid4())
             
+            # Convert date objects to string format for Supabase
+            if 'date_of_birth' in user_data and user_data['date_of_birth']:
+                if hasattr(user_data['date_of_birth'], 'isoformat'):
+                    user_data['date_of_birth'] = user_data['date_of_birth'].isoformat()
+            
             result = self.client.table(self.table).insert(user_data).execute()
             return result.data[0]
         except Exception as e:

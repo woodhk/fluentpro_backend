@@ -22,10 +22,13 @@ class UserService:
     
     async def create_user_from_auth0(self, auth0_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create user from Auth0 profile data"""
+        from datetime import date
+        
         user_data = {
             "auth0_id": auth0_data.get("sub"),
             "email": auth0_data.get("email"),
             "full_name": auth0_data.get("name"),
+            "date_of_birth": date(1990, 1, 1),  # Default date until user updates profile
             "is_active": True
         }
         
