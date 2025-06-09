@@ -45,15 +45,16 @@ else:
 # Custom rate limit exceeded handler
 def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
     """Custom handler for rate limit exceeded responses"""
+    retry_after = getattr(exc, 'retry_after', 60)  # Default to 60 seconds if not available
     response = JSONResponse(
         status_code=429,
         content={
             "error": "Rate limit exceeded",
             "detail": f"Too many requests. Limit: {exc.detail}",
-            "retry_after": exc.retry_after
+            "retry_after": retry_after
         }
     )
-    response.headers["Retry-After"] = str(exc.retry_after)
+    response.headers["Retry-After"] = str(retry_after)
     return response
 
 # Rate limiting decorators for different endpoints
