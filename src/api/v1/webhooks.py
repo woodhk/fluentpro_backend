@@ -12,9 +12,32 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 async def auth0_webhook(request: Request, db: Client = Depends(get_db)):
     """Handle Auth0 webhooks for user events"""
     try:
-        payload = await request.json()
+        # Get raw body first to handle malformed JSON
+        body = await request.body()
+        body_str = body.decode('utf-8')
+        
+        # Log the raw payload for debugging
+        print(f"Auth0 webhook received: {body_str[:200]}...")
+        
+        # Try to parse JSON
+        try:
+            payload = json.loads(body_str)
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+            # Try to extract first valid JSON object if multiple are present
+            lines = body_str.strip().split('\n')
+            for line in lines:
+                if line.strip():
+                    try:
+                        payload = json.loads(line)
+                        break
+                    except:
+                        continue
+            else:
+                raise HTTPException(status_code=400, detail="Invalid JSON payload")
+        
         event_type = payload.get("event")
-        user_data = payload.get("data", {})
+        user_data = payload.get("data", {}) or payload.get("user", {})
         
         user_service = UserService(db)
         
