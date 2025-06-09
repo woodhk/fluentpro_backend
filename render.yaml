@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: fluentpro-backend
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "./start.sh"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: PORT
+        value: 10000
