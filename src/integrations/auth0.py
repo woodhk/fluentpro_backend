@@ -62,6 +62,31 @@ class Auth0ManagementClient:
         except Exception as e:
             print(f"Error updating Auth0 user metadata: {e}")
             return None
+    
+    async def create_user(self, email: str, password: str, name: str) -> Dict[str, Any]:
+        """Create a new user in Auth0"""
+        try:
+            token = await self.get_management_token()
+            
+            user_data = {
+                "email": email,
+                "password": password,
+                "name": name,
+                "connection": "Username-Password-Authentication",
+                "email_verified": False
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"https://{self.domain}/api/v2/users",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json=user_data
+                )
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            raise Exception(f"Failed to create user in Auth0: {str(e)}")
 
-# Global instance
+# Global instance and alias
 auth0_client = Auth0ManagementClient()
+Auth0Client = Auth0ManagementClient  # Alias for consistent naming

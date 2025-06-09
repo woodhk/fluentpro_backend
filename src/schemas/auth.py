@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
 
 class TokenPayload(BaseModel):
@@ -22,3 +22,13 @@ class UserCreatedWebhook(BaseModel):
     email: str
     name: Optional[str] = None
     picture: Optional[str] = None
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+
+class SignupResponse(BaseModel):
+    success: bool
+    message: str
+    user_id: Optional[str] = None
