@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from supabase import Client
 from ...core.dependencies import get_current_user, get_db
 from ...core.exceptions import UserNotFoundError
+from ...core.rate_limiting import limiter, API_RATE_LIMIT
 from ...schemas.user import UserResponse, UserUpdate, UserProfile
 from ...services.user_service import UserService
 from typing import Dict, Any
@@ -9,7 +10,8 @@ from typing import Dict, Any
 router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/me", response_model=UserProfile)
-async def get_current_user_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
+@limiter.limit(API_RATE_LIMIT)
+async def get_current_user_profile(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get current user profile"""
     return UserProfile(
         id=current_user["id"],
@@ -20,7 +22,9 @@ async def get_current_user_profile(current_user: Dict[str, Any] = Depends(get_cu
     )
 
 @router.put("/me", response_model=UserProfile)
+@limiter.limit(API_RATE_LIMIT)
 async def update_current_user_profile(
+    request: Request,
     profile_data: UserUpdate,
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: Client = Depends(get_db)
@@ -43,7 +47,9 @@ async def update_current_user_profile(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{user_id}", response_model=UserProfile)
+@limiter.limit(API_RATE_LIMIT)
 async def get_user_by_id(
+    request: Request,
     user_id: str,
     db: Client = Depends(get_db),
     current_user: Dict[str, Any] = Depends(get_current_user)  # Ensure authenticated

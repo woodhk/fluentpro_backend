@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     CORS_ALLOWED_ORIGINS: str = "*"
     ALLOWED_HOSTS: str = "localhost"
     
+    # Redis Configuration (optional - for rate limiting)
+    REDIS_URL: str = ""
+    
     @property
     def AUTH0_ISSUER(self) -> str:
         return f"https://{self.AUTH0_DOMAIN}/"

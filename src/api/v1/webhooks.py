@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from supabase import Client
 from ...core.database import get_db
+from ...core.rate_limiting import limiter, WEBHOOK_RATE_LIMIT, STRICT_RATE_LIMIT
 from ...services.user_service import UserService
 import json
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 @router.post("/auth0")
+@limiter.limit(WEBHOOK_RATE_LIMIT)
 async def auth0_webhook(request: Request, db: Client = Depends(get_db)):
     """Handle Auth0 webhooks for user events"""
     try:
