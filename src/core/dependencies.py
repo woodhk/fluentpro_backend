@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer
 from supabase import Client
 from .auth import auth0_validator
 from .database import get_db
-from ..integrations.supabase import SupabaseUserRepository
+from ..services.auth_service import AuthService
 from typing import Dict, Any
 
 # HTTP Bearer token scheme
@@ -31,15 +31,5 @@ async def get_current_user(
     db: Client = Depends(get_db)
 ) -> Dict[str, Any]:
     """Get current user from Supabase or create if doesn't exist"""
-    user_repo = SupabaseUserRepository(db)
-    user = await user_repo.get_user_by_auth0_id(auth0_id)
-    
-    if not user:
-        # Create user on first login with minimal data
-        user_data = {
-            "auth0_id": auth0_id,
-            "is_active": True
-        }
-        user = await user_repo.create_user(user_data)
-    
-    return user
+    auth_service = AuthService(db)
+    return await auth_service.get_or_create_user(auth0_id)

@@ -3,8 +3,7 @@ from supabase import Client
 from ...core.dependencies import get_current_user_auth0_id, get_current_user, get_db
 from ...core.rate_limiting import limiter, AUTH_RATE_LIMIT
 from ...schemas.auth import AuthStatus, SignupRequest, SignupResponse
-from ...services.user_service import UserService
-from ...integrations.auth0 import Auth0Client
+from ...services.auth_service import AuthService
 from typing import Dict, Any
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -44,31 +43,19 @@ async def signup_user(
 ):
     """Create a new user account"""
     try:
-        # Initialize services
-        auth0_client = Auth0Client()
-        user_service = UserService(db)
+        auth_service = AuthService(db)
         
-        # Create user in Auth0
-        auth0_user = await auth0_client.create_user(
+        result = await auth_service.signup_user(
             email=signup_data.email,
             password=signup_data.password,
-            name=signup_data.full_name
+            full_name=signup_data.full_name
         )
         
-        # Create user in Supabase
-        user_data = {
-            "sub": auth0_user["user_id"],
-            "email": auth0_user["email"],
-            "name": auth0_user.get("name", signup_data.full_name)
-        }
-        
-        supabase_user = await user_service.create_user_from_auth0(user_data)
-        
         return SignupResponse(
-            success=True,
-            message="User created successfully",
-            user_id=supabase_user["id"]
+            success=result["success"],
+            message=result["message"],
+            user_id=result["user_id"]
         )
         
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Signup failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
