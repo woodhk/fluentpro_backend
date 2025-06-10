@@ -1,24 +1,24 @@
 from typing import Dict, Any, Optional
 from supabase import Client
-from ..integrations.supabase import SupabaseUserRepository
+from ..repositories.user_repository import UserRepository
 from ..integrations.auth0 import auth0_client
 from ..schemas.user import UserUpdate, UserCreate
 from ..core.exceptions import UserNotFoundError, DatabaseError
 
 class UserService:
     def __init__(self, db: Client):
-        self.user_repo = SupabaseUserRepository(db)
+        self.user_repo = UserRepository(db)
     
     async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
-        user = await self.user_repo.get_user_by_id(user_id)
+        user = await self.user_repo.get_by_id(user_id)
         if not user:
             raise UserNotFoundError(user_id)
         return user
     
     async def get_user_by_auth0_id(self, auth0_id: str) -> Optional[Dict[str, Any]]:
         """Get user by Auth0 ID"""
-        return await self.user_repo.get_user_by_auth0_id(auth0_id)
+        return await self.user_repo.get_by_auth0_id(auth0_id)
     
     async def create_user_from_auth0(self, auth0_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create user from Auth0 profile data"""

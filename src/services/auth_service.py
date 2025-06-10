@@ -2,6 +2,7 @@ from typing import Dict, Any, Optional
 from ..integrations.auth0 import Auth0ManagementClient
 from ..services.user_service import UserService
 from ..core.exceptions import AuthenticationError, UserNotFoundError
+from ..utils.validators import is_valid_email, is_strong_password, normalize_email, sanitize_string
 from supabase import Client
 
 
@@ -21,6 +22,19 @@ class AuthService:
         3. Return success response
         """
         try:
+            # Validate and normalize input
+            email = normalize_email(email)
+            if not is_valid_email(email):
+                raise AuthenticationError("Invalid email format")
+            
+            is_valid_pwd, pwd_error = is_strong_password(password)
+            if not is_valid_pwd:
+                raise AuthenticationError(pwd_error)
+            
+            full_name = sanitize_string(full_name, max_length=100)
+            if len(full_name) < 2:
+                raise AuthenticationError("Name must be at least 2 characters long")
+            
             # Create user in Auth0
             auth0_user = await self.auth0_client.create_user(
                 email=email,
