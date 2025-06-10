@@ -56,11 +56,12 @@ class UserRepository(SupabaseRepository):
         except Exception as e:
             raise DatabaseError(f"Failed to update user: {str(e)}")
     
-    async def get_active_users(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    async def get_active_users(self, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
         """Get all active users with pagination."""
         try:
+            page = (offset // limit) + 1
             return await self.paginate(
-                page=(offset // limit) + 1,
+                page=page,
                 page_size=limit,
                 filters={"is_active": True},
                 order_by="created_at",

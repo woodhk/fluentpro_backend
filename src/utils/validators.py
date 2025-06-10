@@ -36,6 +36,11 @@ def sanitize_string(value: str, max_length: Optional[int] = None) -> str:
         sanitized = sanitized[:max_length]
     return sanitized
 
+def normalize_email(email: str) -> str:
+    """Normalize email to lowercase."""
+    return email.strip().lower()
+
+# Additional validators for future use
 def is_valid_date_of_birth(dob: date) -> tuple[bool, Optional[str]]:
     """
     Validate date of birth.
@@ -72,10 +77,6 @@ def is_valid_uuid(uuid_string: str) -> bool:
     """Validate UUID format."""
     uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     return bool(re.match(uuid_pattern, uuid_string.lower()))
-
-def normalize_email(email: str) -> str:
-    """Normalize email to lowercase."""
-    return email.strip().lower()
 
 def is_valid_language_code(code: str) -> bool:
     """Validate ISO 639-1 language code format."""

@@ -58,7 +58,7 @@ class UserService:
             raise ValueError("Could not fetch Auth0 profile")
         
         # Get existing user from database
-        user = await self.user_repo.get_user_by_auth0_id(auth0_id)
+        user = await self.user_repo.get_by_auth0_id(auth0_id)
         
         if not user:
             # Create new user if doesn't exist

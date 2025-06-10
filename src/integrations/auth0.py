@@ -1,6 +1,9 @@
 import httpx
 from typing import Dict, Any, Optional
 from ..core.config import settings
+from ..core.logging import get_logger
+
+logger = get_logger(__name__)
 
 class Auth0ManagementClient:
     def __init__(self):
@@ -43,7 +46,7 @@ class Auth0ManagementClient:
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
-            print(f"Error getting Auth0 user profile: {e}")
+            logger.error(f"Error getting Auth0 user profile: {e}", exc_info=True)
             return None
     
     async def update_user_metadata(self, auth0_id: str, user_metadata: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -60,7 +63,7 @@ class Auth0ManagementClient:
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
-            print(f"Error updating Auth0 user metadata: {e}")
+            logger.error(f"Error updating Auth0 user metadata: {e}", exc_info=True)
             return None
     
     async def create_user(self, email: str, password: str, name: str) -> Dict[str, Any]:
