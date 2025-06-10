@@ -58,12 +58,20 @@ Swift App → POST /api/v1/auth/signup → Backend creates user in Auth0 → Bac
 
 ### Layer Architecture
 ```
-API Routes (src/api/v1/) → Services (src/services/) → Integrations (src/integrations/)
-                      ↓
-              Schemas (src/schemas/) for validation
+API Routes (src/api/v1/) → Services (src/services/) → Repositories (src/repositories/) → Database
+                      ↓                          ↓
+              Schemas (src/schemas/) for validation    Integrations (src/integrations/) for external APIs
                       ↓
               Core (src/core/) for infrastructure
+                      ↓
+              Utils (src/utils/) for reusable functions
 ```
+
+**Repository Pattern Implementation:**
+- `BaseRepository`: Abstract base class with CRUD operations
+- `SupabaseRepository`: Concrete implementation for Supabase operations
+- `UserRepository`: Domain-specific repository extending SupabaseRepository
+- Repositories handle all database interactions and data formatting
 
 ### Key Components
 
@@ -72,10 +80,15 @@ API Routes (src/api/v1/) → Services (src/services/) → Integrations (src/inte
 - `get_current_user()` dependency: JWT validation and user retrieval
 - Rate limiting on all auth endpoints (30/minute)
 
-**Database Integration:**
-- `SupabaseUserRepository`: All user data operations
-- `UserService`: Business logic layer between API and database
+**Data Access Layer:**
+- `UserRepository`: All user data operations using repository pattern
+- `UserService`: Business logic layer between API and repositories
 - Async-first design with `httpx` for external API calls
+
+**Validation and Utilities:**
+- `utils/validators.py`: Input validation functions (email, password strength, etc.)
+- `schemas/common.py`: Reusable Pydantic models for pagination, responses
+- Proper error handling with custom exceptions in `core/exceptions.py`
 
 **Configuration:**
 - Environment-based settings via `pydantic-settings`
@@ -84,12 +97,22 @@ API Routes (src/api/v1/) → Services (src/services/) → Integrations (src/inte
 
 ## Development Patterns
 
-### Adding New Endpoints
-1. Define Pydantic schemas in `src/schemas/`
-2. Implement business logic in `src/services/`
-3. Create route handlers in `src/api/v1/`
-4. Apply rate limiting with appropriate limits
-5. Use dependency injection for database/auth
+### Adding New Features
+1. **Repository Layer**: Create or extend repository classes in `src/repositories/`
+   - Extend `SupabaseRepository` for new entities
+   - Implement domain-specific query methods
+2. **Service Layer**: Implement business logic in `src/services/`
+   - Use repositories for data access
+   - Handle validation and business rules
+3. **API Layer**: Create route handlers in `src/api/v1/`
+   - Define Pydantic schemas in `src/schemas/`
+   - Apply rate limiting with appropriate limits
+   - Use dependency injection for database/auth
+
+### Adding New Validations
+- Add reusable validators to `src/utils/validators.py`
+- Create domain-specific schemas in `src/schemas/`
+- Use validators in service layer before calling repositories
 
 ### Required Patterns
 - **Always use async/await** for I/O operations
@@ -97,6 +120,9 @@ API Routes (src/api/v1/) → Services (src/services/) → Integrations (src/inte
 - **Validate with Pydantic schemas** for request/response
 - **Use dependency injection** for shared resources (database, auth)
 - **Handle errors with appropriate HTTP status codes**
+- **Use repository pattern** for all database operations
+- **Use structured logging** with `get_logger(__name__)` instead of print statements
+- **Apply input validation** in service layer using utils/validators
 
 ### Rate Limiting Configuration
 - Auth endpoints: 30/minute (`AUTH_RATE_LIMIT`)
@@ -104,9 +130,24 @@ API Routes (src/api/v1/) → Services (src/services/) → Integrations (src/inte
 - Sensitive operations: 5/minute (`STRICT_RATE_LIMIT`)
 
 ### Authentication Dependencies
-- `get_current_user()`: Full user object from Supabase
-- `get_current_user_auth0_id()`: Just the Auth0 ID from JWT
+- `get_current_user()`: Full user object from Supabase (creates user if doesn't exist)
+- `get_current_user_auth0_id()`: Just the Auth0 ID from JWT token
 - `get_db()`: Supabase client instance
+
+### Repository Usage Pattern
+```python
+# In services layer
+from ..repositories.user_repository import UserRepository
+
+class SomeService:
+    def __init__(self, db: Client):
+        self.user_repo = UserRepository(db)
+    
+    async def some_method(self):
+        # Use repository methods, not direct database calls
+        user = await self.user_repo.get_by_auth0_id(auth0_id)
+        return await self.user_repo.create_user(user_data)
+```
 
 ## Environment Variables Required
 

@@ -7,6 +7,7 @@ class UserNotFoundError(HTTPException):
             detail=f"User with ID {user_id} not found"
         )
 
+# Currently unused - reserved for future duplicate email validation
 class UserAlreadyExistsError(HTTPException):
     def __init__(self, email: str):
         super().__init__(
