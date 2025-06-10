@@ -1,9 +1,9 @@
 from typing import Dict, Any, Optional
 from supabase import Client
-from ..repositories.user_repository import UserRepository
-from ..integrations.auth0 import auth0_client
-from ..schemas.user import UserUpdate, UserCreate
-from ..core.exceptions import UserNotFoundError, DatabaseError
+from ...repositories.users.user_repository import UserRepository
+from ...integrations.auth0 import auth0_client
+from ...schemas.users.user import UserUpdate, UserCreate
+from ...core.exceptions import UserNotFoundError, DatabaseError
 
 class UserService:
     def __init__(self, db: Client):

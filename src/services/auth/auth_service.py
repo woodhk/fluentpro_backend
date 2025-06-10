@@ -1,8 +1,8 @@
 from typing import Dict, Any, Optional
-from ..integrations.auth0 import Auth0ManagementClient
-from ..services.user_service import UserService
-from ..core.exceptions import AuthenticationError, UserNotFoundError
-from ..utils.validators import is_valid_email, is_strong_password, normalize_email, sanitize_string
+from ...integrations.auth0 import Auth0ManagementClient
+from ..users.user_service import UserService
+from ...core.exceptions import AuthenticationError, UserNotFoundError
+from ...utils.validators import is_valid_email, is_strong_password, normalize_email, sanitize_string
 from supabase import Client
 
 

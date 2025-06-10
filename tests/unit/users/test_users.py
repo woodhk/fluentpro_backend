@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from src.services.user_service import UserService
+from src.services.users.user_service import UserService
 from src.integrations.supabase import SupabaseUserRepository
 from src.core.exceptions import UserNotFoundError, DatabaseError
 
@@ -122,7 +122,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_update_user_profile_success(self, mock_supabase_client):
         """Test updating user profile"""
-        from src.schemas.user import UserUpdate
+        from src.schemas.users.user import UserUpdate
         
         user_service = UserService(mock_supabase_client)
         update_data = UserUpdate(full_name="Updated Name", email="updated@example.com")
@@ -257,7 +257,7 @@ class TestUserValidation:
     
     def test_user_response_schema_valid(self):
         """Test UserResponse schema with valid data"""
-        from src.schemas.user import UserResponse
+        from src.schemas.users.user import UserResponse
         from datetime import datetime
         
         data = {
@@ -277,7 +277,7 @@ class TestUserValidation:
     
     def test_user_update_schema_partial(self):
         """Test UserUpdate schema with partial data"""
-        from src.schemas.user import UserUpdate
+        from src.schemas.users.user import UserUpdate
         
         # Should allow partial updates
         update = UserUpdate(full_name="New Name")
@@ -287,7 +287,7 @@ class TestUserValidation:
     
     def test_user_create_schema_required_fields(self):
         """Test UserCreate schema requires essential fields"""
-        from src.schemas.user import UserCreate
+        from src.schemas.users.user import UserCreate
         
         # Should require auth0_id and email
         with pytest.raises(ValueError):

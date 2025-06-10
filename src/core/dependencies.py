@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer
 from supabase import Client
 from .auth import auth0_validator
 from .database import get_db
-from ..services.auth_service import AuthService
+from ..services.auth.auth_service import AuthService
 from typing import Dict, Any
 
 # HTTP Bearer token scheme

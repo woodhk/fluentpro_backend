@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from supabase import Client
-from ...core.dependencies import get_current_user, get_db
-from ...core.exceptions import UserNotFoundError
-from ...core.rate_limiting import limiter, API_RATE_LIMIT
-from ...schemas.user import UserResponse, UserUpdate, UserProfile
-from ...services.user_service import UserService
+from ....core.dependencies import get_current_user, get_db
+from ....core.exceptions import UserNotFoundError
+from ....core.rate_limiting import limiter, API_RATE_LIMIT
+from ....schemas.users.user import UserResponse, UserUpdate, UserProfile
+from ....services.users.user_service import UserService
 from typing import Dict, Any
 
 router = APIRouter(prefix="/users", tags=["users"])

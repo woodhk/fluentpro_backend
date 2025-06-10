@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from supabase import Client
-from ...core.dependencies import get_current_user_auth0_id, get_current_user, get_db
-from ...core.rate_limiting import limiter, AUTH_RATE_LIMIT
-from ...schemas.auth import AuthStatus, SignupRequest, SignupResponse
-from ...services.auth_service import AuthService
+from ....core.dependencies import get_current_user_auth0_id, get_current_user, get_db
+from ....core.rate_limiting import limiter, AUTH_RATE_LIMIT
+from ....schemas.auth.auth import AuthStatus, SignupRequest, SignupResponse
+from ....services.auth.auth_service import AuthService
 from typing import Dict, Any
 
 router = APIRouter(prefix="/auth", tags=["authentication"])

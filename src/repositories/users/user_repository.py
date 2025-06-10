@@ -1,8 +1,8 @@
 from typing import Dict, Any, Optional, List
 from datetime import date
 from supabase import Client
-from .base import SupabaseRepository
-from ..core.exceptions import DatabaseError
+from ..base import SupabaseRepository
+from ...core.exceptions import DatabaseError
 
 class UserRepository(SupabaseRepository):
     """Repository for user data operations."""
