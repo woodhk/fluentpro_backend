@@ -156,6 +156,7 @@ class SomeService:
 - `AUTH0_CLIENT_ID`
 - `AUTH0_CLIENT_SECRET`
 - `AUTH0_AUDIENCE`
+- `AUTH0_VERIFY_SIGNATURE` (optional, default: false) - Set to true in production to enable JWT signature verification
 
 **Supabase:**
 - `SUPABASE_URL`
