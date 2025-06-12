@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import Mock, AsyncMock, patch
 from src.main import app
 from src.core.dependencies import get_db, get_current_user
-from src.integrations.supabase import SupabaseUserRepository
+from src.repositories.users.user_repository import UserRepository
 
 # Test data
 MOCK_USER_DATA = {
@@ -46,7 +46,7 @@ def mock_supabase_client():
 @pytest.fixture
 def mock_user_repo(mock_supabase_client):
     """Mock user repository"""
-    repo = SupabaseUserRepository(mock_supabase_client)
+    repo = UserRepository(mock_supabase_client)
     repo.get_user_by_auth0_id = AsyncMock(return_value=MOCK_USER_DATA)
     repo.get_user_by_id = AsyncMock(return_value=MOCK_USER_DATA)
     repo.create_user = AsyncMock(return_value=MOCK_USER_DATA)
