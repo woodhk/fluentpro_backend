@@ -20,8 +20,8 @@ class TestRoleSearchConfiguration:
         
         # These should fail initially (RED)
         assert hasattr(settings, 'AZURE_SEARCH_ENDPOINT')
-        assert hasattr(settings, 'AZURE_SEARCH_API_KEY')
+        assert hasattr(settings, 'AZURE_SEARCH_KEY')
         assert hasattr(settings, 'AZURE_SEARCH_INDEX_NAME')
         assert settings.AZURE_SEARCH_ENDPOINT is not None
-        assert settings.AZURE_SEARCH_API_KEY is not None
-        assert settings.AZURE_SEARCH_INDEX_NAME == "fluentpro-roles"
+        assert settings.AZURE_SEARCH_KEY is not None
+        assert settings.AZURE_SEARCH_INDEX_NAME == "roles-index"

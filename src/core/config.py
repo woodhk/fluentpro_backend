@@ -22,6 +22,15 @@ class Settings(BaseSettings):
     
     # Redis Configuration (optional - for rate limiting)
     REDIS_URL: str = ""
+
+    # OpenAI Configuration
+    OPENAI_API_KEY: str
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    
+    # Azure Search Configuration
+    AZURE_SEARCH_ENDPOINT: str
+    AZURE_SEARCH_KEY: str
+    AZURE_SEARCH_INDEX_NAME: str = "roles-index"
     
     @property
     def AUTH0_ISSUER(self) -> str:
