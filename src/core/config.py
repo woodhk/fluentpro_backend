@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     AUTH0_CLIENT_SECRET: str
     AUTH0_AUDIENCE: str
     AUTH0_ALGORITHMS: List[str] = ["RS256"]
+    AUTH0_VERIFY_SIGNATURE: bool = False  # Set to True in production
     
     # Supabase Configuration
     SUPABASE_URL: str

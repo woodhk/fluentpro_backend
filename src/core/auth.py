@@ -24,21 +24,32 @@ class Auth0JWTValidator:
     def verify_jwt_token(self, token: str) -> Dict[str, Any]:
         """Verify Auth0 JWT token and extract payload"""
         try:
-            # For now, we'll decode without signature verification
-            # In production, you should verify the signature using JWKS
-            payload = jwt.decode(
-                token,
-                key="",  # Empty key since we're not verifying signature
-                algorithms=self.algorithms,
-                audience=self.audience,
-                issuer=self.issuer,
-                options={
-                    "verify_signature": False,  # Disable signature verification
-                    "verify_exp": False,        # Disable expiration verification
-                    "verify_aud": False,        # Disable audience verification
-                    "verify_iss": False         # Disable issuer verification
-                }
-            )
+            if settings.AUTH0_VERIFY_SIGNATURE:
+                # Production mode: Full JWT verification
+                # TODO: Implement proper JWKS key retrieval for signature verification
+                payload = jwt.decode(
+                    token,
+                    key="",  # Should be replaced with proper JWKS key in production
+                    algorithms=self.algorithms,
+                    audience=self.audience,
+                    issuer=self.issuer,
+                    options={"verify_signature": True}
+                )
+            else:
+                # Development/testing mode: Skip verification
+                payload = jwt.decode(
+                    token,
+                    key="",
+                    algorithms=self.algorithms,
+                    audience=self.audience,
+                    issuer=self.issuer,
+                    options={
+                        "verify_signature": False,
+                        "verify_exp": False,
+                        "verify_aud": False,
+                        "verify_iss": False
+                    }
+                )
             return payload
         except JWTError as e:
             raise ValueError(f"Invalid token: {str(e)}")
