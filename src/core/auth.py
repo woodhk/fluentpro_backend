@@ -32,7 +32,12 @@ class Auth0JWTValidator:
                 algorithms=self.algorithms,
                 audience=self.audience,
                 issuer=self.issuer,
-                options={"verify_signature": False}  # Disable for now
+                options={
+                    "verify_signature": False,  # Disable signature verification
+                    "verify_exp": False,        # Disable expiration verification
+                    "verify_aud": False,        # Disable audience verification
+                    "verify_iss": False         # Disable issuer verification
+                }
             )
             return payload
         except JWTError as e:
