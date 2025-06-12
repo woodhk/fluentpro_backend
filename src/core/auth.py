@@ -28,6 +28,7 @@ class Auth0JWTValidator:
             # In production, you should verify the signature using JWKS
             payload = jwt.decode(
                 token,
+                key="",  # Empty key since we're not verifying signature
                 algorithms=self.algorithms,
                 audience=self.audience,
                 issuer=self.issuer,
