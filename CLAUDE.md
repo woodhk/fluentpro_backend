@@ -36,11 +36,12 @@ pytest -m unit          # Unit tests only
 pytest -m integration   # Integration tests only
 pytest -m auth          # Authentication tests
 pytest -m rate_limit    # Rate limiting tests
+pytest -m slow          # Long-running tests
 
 # Run single test file
-pytest tests/test_specific.py
+pytest tests/unit/test_specific.py
 
-# Run with verbose output
+# Run with verbose output (default in pytest.ini)
 pytest -v
 ```
 
@@ -331,9 +332,25 @@ POST /api/v1/admin/reindex-roles
 - Semantic ranking with confidence scores (0.0-1.0)
 - Industry-scoped filtering to improve relevance
 
+## Development Notes
+
+**Background Tasks:**
+- Celery framework is set up but not yet implemented (empty worker files)
+- All operations currently run synchronously within FastAPI request-response cycle
+- Long-running operations like role reindexing happen in real-time via admin endpoints
+
+**Code Quality:**
+- No linting/formatting tools are currently configured
+- Consider adding Black + Ruff for code formatting and linting
+- Testing is well-configured with pytest markers and structured test organization
+
+**Build Scripts:**
+- `build.sh`: Production dependency installation
+- `start.sh`: Uvicorn server startup (uses PORT environment variable)
+
 ## Deployment Notes
 
-- Deployed on Render
+- Deployed on Render using `render.yaml` configuration
 - Rate limiting uses Redis in production, falls back to in-memory for development
 - Structured JSON logging for production monitoring
 - CORS configured for frontend integration
