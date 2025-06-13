@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from src.main import app
 import os
 from unittest.mock import patch, Mock, AsyncMock
+from src.core.dependencies import get_current_user_auth0_id, get_db
 
 @pytest.mark.integration
 class TestRoleSearchE2E:
@@ -20,14 +21,9 @@ class TestRoleSearchE2E:
     @pytest.fixture
     def mock_all_services(self):
         """Mock all external services for E2E testing."""
-        with patch('src.core.dependencies.get_current_user_auth0_id') as mock_auth, \
-             patch('src.integrations.openai.OpenAI') as mock_openai_class, \
+        with patch('src.integrations.openai.OpenAI') as mock_openai_class, \
              patch('src.integrations.azure_search.SearchClient') as mock_search_client, \
-             patch('src.integrations.azure_search.SearchIndexClient') as mock_index_client, \
-             patch('src.core.database.get_supabase_client') as mock_db_client:
-            
-            # Mock auth
-            mock_auth.return_value = "auth0|test123"
+             patch('src.integrations.azure_search.SearchIndexClient') as mock_index_client:
             
             # Mock database
             mock_db = Mock()
@@ -36,7 +32,10 @@ class TestRoleSearchE2E:
             mock_db.insert = Mock(return_value=mock_db)
             mock_db.update = Mock(return_value=mock_db)
             mock_db.eq = Mock(return_value=mock_db)
-            mock_db_client.return_value = mock_db
+            
+            # Override FastAPI dependencies
+            app.dependency_overrides[get_current_user_auth0_id] = lambda: "auth0|test123"
+            app.dependency_overrides[get_db] = lambda: mock_db
             
             # Mock OpenAI
             mock_openai = Mock()
@@ -49,12 +48,15 @@ class TestRoleSearchE2E:
             mock_search = Mock()
             mock_search_client.return_value = mock_search
             
-            yield {
-                'auth': mock_auth,
-                'db': mock_db,
-                'openai': mock_openai,
-                'azure_search': mock_search
-            }
+            try:
+                yield {
+                    'db': mock_db,
+                    'openai': mock_openai,
+                    'azure_search': mock_search
+                }
+            finally:
+                # Clear dependency overrides after test
+                app.dependency_overrides.clear()
     
     def test_complete_role_search_flow(self, client, auth_headers, mock_all_services):
         """Test the complete flow from search to selection."""

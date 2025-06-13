@@ -33,10 +33,14 @@ class AzureSearchService:
             documents = []
             for role in roles:
                 if role.get("embedding_vector"):
+                    # Create search keywords by combining title and industry
+                    search_keywords = f"{role['title']} {role['industry_name']}"
+                    
                     documents.append({
                         "id": role["id"],
                         "title": role["title"],
                         "description": role["description"],
+                        "search_keywords": search_keywords,
                         "industry_id": role["industry_id"],
                         "industry_name": role["industry_name"],
                         "is_system_role": role["is_system_role"],

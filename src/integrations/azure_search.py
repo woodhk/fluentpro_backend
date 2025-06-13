@@ -4,7 +4,8 @@ from azure.search.documents.indexes.models import (
     SearchIndex, SimpleField, SearchableField, 
     SearchField, SearchFieldDataType, VectorSearch,
     HnswAlgorithmConfiguration, HnswParameters,
-    VectorSearchProfile
+    VectorSearchProfile, SemanticConfiguration,
+    SemanticField, SemanticPrioritizedFields, SemanticSearch
 )
 from azure.search.documents.models import VectorizedQuery
 from azure.core.credentials import AzureKeyCredential
@@ -29,6 +30,15 @@ class AzureSearchClient:
             credential=self.credential
         )
     
+    async def delete_index(self):
+        """Delete the Azure Search index."""
+        try:
+            self.index_client.delete_index(self.index_name)
+            logger.info(f"Deleted Azure Search index: {self.index_name}")
+        except Exception as e:
+            logger.error(f"Failed to delete index: {str(e)}")
+            raise
+    
     async def create_index(self):
         """Create Azure Search index for roles."""
         # Define the search index
@@ -37,6 +47,8 @@ class AzureSearchClient:
             SearchableField(name="title", type=SearchFieldDataType.String, 
                           searchable=True, filterable=True),
             SearchableField(name="description", type=SearchFieldDataType.String, 
+                          searchable=True),
+            SearchableField(name="search_keywords", type=SearchFieldDataType.String, 
                           searchable=True),
             SimpleField(name="industry_id", type=SearchFieldDataType.String, 
                        filterable=True),
@@ -74,15 +86,40 @@ class AzureSearchClient:
             ]
         )
         
+        # Configure semantic search
+        semantic_config = SemanticConfiguration(
+            name="role-semantic-config",
+            prioritized_fields=SemanticPrioritizedFields(
+                title_field=SemanticField(field_name="title"),
+                content_fields=[
+                    SemanticField(field_name="description"),
+                    SemanticField(field_name="search_keywords")
+                ],
+                keywords_fields=[SemanticField(field_name="search_keywords")]
+            )
+        )
+        
+        semantic_search = SemanticSearch(configurations=[semantic_config])
+        
         index = SearchIndex(
             name=self.index_name,
             fields=fields,
-            vector_search=vector_search
+            vector_search=vector_search,
+            semantic_search=semantic_search
         )
         
         try:
-            self.index_client.create_or_update_index(index)
-            logger.info(f"Created/Updated Azure Search index: {self.index_name}")
+            # Try to delete existing index first
+            try:
+                self.index_client.delete_index(self.index_name)
+                logger.info(f"Deleted existing Azure Search index: {self.index_name}")
+            except Exception:
+                # Index doesn't exist, that's fine
+                pass
+            
+            # Create the new index
+            self.index_client.create_index(index)
+            logger.info(f"Created Azure Search index: {self.index_name}")
         except Exception as e:
             logger.error(f"Failed to create index: {str(e)}")
             raise
