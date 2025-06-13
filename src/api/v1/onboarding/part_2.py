@@ -219,9 +219,13 @@ async def complete_part_2(
     logger.info(f"Completing Part 2 for user {auth0_id}")
     
     service = CommunicationService(db)
+    progress_service = OnboardingProgressService(db)
     
     try:
         result = await service.complete_part_2(auth0_id)
+        
+        # Track completion in the progress service (no longer updates users table)
+        # This doesn't need an action since Part 2 completion isn't a final step
         
         return {
             "success": result["success"],

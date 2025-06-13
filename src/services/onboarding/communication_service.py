@@ -190,14 +190,8 @@ class CommunicationService:
             if summary["total_partners_selected"] == 0:
                 raise ValueError("No communication partners selected")
             
-            # Update onboarding status
-            # Assuming the next status after basic_info is personalisation
-            update_data = {
-                "onboarding_status": OnboardingStatus.PERSONALISATION.value,
-                "updated_at": "now()"
-            }
-            
-            await self.profile_repo.update(user["id"], update_data)
+            # No longer update onboarding_status in users table
+            # The progress tracking is now handled by the progress service
             
             logger.info(f"User {user['id']} completed Part 2 of onboarding")
             

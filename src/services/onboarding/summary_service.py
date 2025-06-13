@@ -82,13 +82,8 @@ class OnboardingSummaryService:
             if validation_errors:
                 raise ValueError(f"Onboarding incomplete: {', '.join(validation_errors)}")
             
-            # Update onboarding status
-            update_data = {
-                "onboarding_status": OnboardingStatus.COMPLETED.value,
-                "updated_at": "now()"
-            }
-            
-            await self.profile_repo.update(user["id"], update_data)
+            # No longer update onboarding_status in users table
+            # The completion is tracked in the progress service
             
             logger.info(f"User {user['id']} completed onboarding")
             
