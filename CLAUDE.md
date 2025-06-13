@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FluentPro Backend is a FastAPI-based language learning platform API with Auth0 authentication and Supabase database integration. The system uses async-first architecture with no webhooks - all user management flows through direct API calls.
+FluentPro Backend is a FastAPI-based language learning platform API with Auth0 authentication and Supabase database integration. The system uses async-first architecture with no webhooks - all user management flows through direct API calls. The platform features AI-powered job matching using OpenAI embeddings and Azure Cognitive Search for semantic role discovery.
 
 ## Development Commands
 
@@ -44,6 +44,21 @@ pytest tests/test_specific.py
 pytest -v
 ```
 
+### Azure Search Management
+```bash
+# Create the Azure Search index (one-time setup)
+python scripts/azure_search_management.py create-index
+
+# Reindex all roles (update search index)
+python scripts/azure_search_management.py reindex
+
+# Clear search index
+python scripts/azure_search_management.py clear-index
+
+# Generate missing embeddings
+python scripts/azure_search_management.py generate-embeddings
+```
+
 ## Architecture Overview
 
 ### Core Authentication Flow
@@ -55,6 +70,23 @@ Swift App → POST /api/v1/auth/signup → Backend creates user in Auth0 → Bac
 - All user operations go through the backend API
 - Direct creation in both Auth0 and Supabase via API calls
 - Simpler architecture, no webhook sync issues
+
+### AI-Powered Job Matching Flow
+```
+User Input → OpenAI Embedding → Azure Search (Vector) → Role Matches → User Selection → Database Update
+```
+
+**Vector Search System:**
+- Azure Cognitive Search with OpenAI embeddings (text-embedding-3-small, 1536 dimensions)
+- HNSW algorithm configuration for semantic search
+- Industry-filtered role matching with confidence scores
+- Custom role creation with automatic embedding generation and indexing
+
+### Onboarding Flow Architecture
+**Three-Part System:**
+- **Part 1**: Native language, industry selection, role search/selection with AI matching
+- **Part 2**: Communication partner preferences (placeholder)
+- **Part 3**: Additional onboarding steps (placeholder)
 
 ### Layer Architecture
 ```
@@ -79,6 +111,12 @@ API Routes (src/api/v1/) → Services (src/services/) → Repositories (src/repo
 - `Auth0ManagementClient`: Programmatic user creation in Auth0
 - `get_current_user()` dependency: JWT validation and user retrieval
 - Rate limiting on all auth endpoints (30/minute)
+
+**AI Integration Layer:**
+- `AzureSearchClient`: Vector search operations with semantic configuration
+- `OpenAIClient`: Embedding generation (single and batch operations)
+- `JobMatchingService`: Business logic for role search and selection
+- `AzureSearchService`: Management operations for reindexing and maintenance
 
 **Data Access Layer:**
 - `UserRepository`: All user data operations using repository pattern
@@ -163,6 +201,15 @@ class SomeService:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_KEY`
 
+**OpenAI:**
+- `OPENAI_API_KEY`
+- `OPENAI_EMBEDDING_MODEL` (optional, default: "text-embedding-3-small")
+
+**Azure Search:**
+- `AZURE_SEARCH_ENDPOINT`
+- `AZURE_SEARCH_KEY`
+- `AZURE_SEARCH_INDEX_NAME` (optional, default: "roles-index")
+
 **Optional:**
 - `REDIS_URL` (for distributed rate limiting)
 - `LOG_LEVEL`, `LOG_FORMAT`, `LOG_FILE` (for logging configuration)
@@ -177,6 +224,37 @@ The project uses pytest with specific markers:
 - `slow`: Long-running tests
 
 Integration tests can be run against the deployed API at `https://fluentpro-backend.onrender.com`
+
+## AI Integration Patterns
+
+### Role Search and Matching
+```python
+# In services layer - semantic search pattern
+job_matching_service = JobMatchingService(db)
+result = await job_matching_service.search_roles(
+    auth0_id=auth0_id,
+    job_title="Software Engineer", 
+    job_description="Building web applications"
+)
+```
+
+### Custom Role Creation
+- User-provided roles automatically generate embeddings
+- Real-time indexing in Azure Search
+- Industry association for filtered search
+
+### Admin Operations
+**Reindexing Endpoint:**
+```bash
+# Trigger full reindex via API
+POST /api/v1/admin/reindex-roles
+# Returns: {"success": true, "total_roles": 14, "documents_indexed": 14}
+```
+
+**Vector Search Configuration:**
+- HNSW algorithm for approximate nearest neighbor search
+- Semantic ranking with confidence scores (0.0-1.0)
+- Industry-scoped filtering to improve relevance
 
 ## Deployment Notes
 
