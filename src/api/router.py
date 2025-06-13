@@ -4,7 +4,8 @@ from .v1.users.users import router as users_router
 from .v1.onboarding.part_1 import router as onboarding_part_1_router
 from .v1.admin import router as admin_router
 from .v1.onboarding.part_2 import router as onboarding_part_2_router
-from .v1.onboarding.part_3 import router as onboarding_part_3_router 
+from .v1.onboarding.part_3 import router as onboarding_part_3_router
+from .v1.onboarding.progress import router as onboarding_progress_router
 
 api_router = APIRouter()
 
@@ -15,3 +16,4 @@ api_router.include_router(onboarding_part_1_router, prefix="/v1/onboarding")
 api_router.include_router(admin_router, prefix="/v1")
 api_router.include_router(onboarding_part_2_router, prefix="/v1/onboarding")
 api_router.include_router(onboarding_part_3_router, prefix="/v1/onboarding")
+api_router.include_router(onboarding_progress_router, prefix="/v1/onboarding")

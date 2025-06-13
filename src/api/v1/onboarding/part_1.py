@@ -11,6 +11,7 @@ from ....schemas.onboarding.part_1 import (
 )
 from ....services.onboarding.profile_service import ProfileService
 from ....services.onboarding.job_matching_service import JobMatchingService
+from ....services.onboarding.onboarding_progress_service import OnboardingProgressService
 from ....core.logging import get_logger
 
 router = APIRouter(prefix="/part-1", tags=["onboarding-part-1"])
@@ -29,11 +30,23 @@ async def set_native_language(
     logger.info(f"Setting native language for user {auth0_id} to {language_request.native_language}")
     
     profile_service = ProfileService(db)
+    progress_service = OnboardingProgressService(db)
     
     try:
+        # Update profile
         result = await profile_service.update_native_language(
             auth0_id=auth0_id,
             native_language=language_request.native_language
+        )
+        
+        # Track progress after successful operation
+        await progress_service.update_progress_on_action(
+            auth0_id=auth0_id,
+            action="set_native_language",
+            action_data={
+                "native_language": language_request.native_language.value,
+                "timestamp": "now()"
+            }
         )
         
         return NativeLanguageResponse(
@@ -59,11 +72,24 @@ async def set_industry(
     logger.info(f"Setting industry for user {auth0_id} to {industry_request.industry}")
     
     profile_service = ProfileService(db)
+    progress_service = OnboardingProgressService(db)
     
     try:
+        # Update profile
         result = await profile_service.update_industry(
             auth0_id=auth0_id,
             industry=industry_request.industry
+        )
+        
+        # Track progress after successful operation
+        await progress_service.update_progress_on_action(
+            auth0_id=auth0_id,
+            action="set_industry",
+            action_data={
+                "industry": industry_request.industry.value,
+                "industry_id": result.get("industry_id"),
+                "timestamp": "now()"
+            }
         )
         
         return IndustryResponse(
@@ -89,12 +115,26 @@ async def search_roles(
     logger.info(f"Searching roles for user {auth0_id}")
     
     job_matching_service = JobMatchingService(db)
+    progress_service = OnboardingProgressService(db)
     
     try:
+        # Perform role search
         result = await job_matching_service.search_roles(
             auth0_id=auth0_id,
             job_title=search_request.job_title,
             job_description=search_request.job_description
+        )
+        
+        # Track progress - user has engaged with role search
+        await progress_service.update_progress_on_action(
+            auth0_id=auth0_id,
+            action="search_roles",
+            action_data={
+                "job_title": search_request.job_title,
+                "job_description": search_request.job_description,
+                "matches_found": len(result["matches"]),
+                "timestamp": "now()"
+            }
         )
         
         # Convert to response format
@@ -132,13 +172,36 @@ async def select_role(
     logger.info(f"Role selection for user {auth0_id}")
     
     job_matching_service = JobMatchingService(db)
+    progress_service = OnboardingProgressService(db)
     
     try:
+        # Process role selection
         result = await job_matching_service.select_role(
             auth0_id=auth0_id,
             role_id=selection_request.role_id,
             custom_title=selection_request.custom_title,
             custom_description=selection_request.custom_description
+        )
+        
+        # Prepare progress data
+        progress_data = {
+            "is_custom": result.get("is_custom", False),
+            "timestamp": "now()"
+        }
+        
+        if result.get("is_custom"):
+            progress_data.update({
+                "custom_title": selection_request.custom_title,
+                "custom_description": selection_request.custom_description
+            })
+        else:
+            progress_data["selected_role_id"] = result.get("role_id")
+        
+        # Track progress after successful selection
+        await progress_service.update_progress_on_action(
+            auth0_id=auth0_id,
+            action="select_role",
+            action_data=progress_data
         )
         
         return RoleSelectionResponse(

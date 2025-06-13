@@ -10,6 +10,7 @@ from ....schemas.onboarding.part_3 import (
     CompleteOnboardingResponse
 )
 from ....services.onboarding.summary_service import OnboardingSummaryService
+from ....services.onboarding.onboarding_progress_service import OnboardingProgressService
 from ....core.exceptions import UserNotFoundError
 from ....core.logging import get_logger
 
@@ -37,9 +38,23 @@ async def get_onboarding_summary(
     logger.info(f"Getting onboarding summary for user {auth0_id}")
     
     service = OnboardingSummaryService(db)
+    progress_service = OnboardingProgressService(db)
     
     try:
+        # Get the summary
         summary = await service.get_onboarding_summary(auth0_id)
+        
+        # Track that user is viewing the final summary
+        # This indicates they're ready to complete onboarding
+        await progress_service.update_progress_on_action(
+            auth0_id=auth0_id,
+            action="view_summary",
+            action_data={
+                "viewed_final_summary": True,
+                "is_complete": summary.get("is_complete", False),
+                "timestamp": "now()"
+            }
+        )
         
         return OnboardingSummaryResponse(
             success=True,
@@ -81,9 +96,21 @@ async def complete_onboarding(
     logger.info(f"Completing onboarding for user {auth0_id}")
     
     service = OnboardingSummaryService(db)
+    progress_service = OnboardingProgressService(db)
     
     try:
+        # Complete the onboarding
         result = await service.complete_onboarding(auth0_id)
+        
+        # Track final completion in progress tracking
+        await progress_service.update_progress_on_action(
+            auth0_id=auth0_id,
+            action="complete_onboarding",
+            action_data={
+                "completed_at": "now()",
+                "final_status": result["onboarding_status"]
+            }
+        )
         
         return CompleteOnboardingResponse(
             success=result["success"],
