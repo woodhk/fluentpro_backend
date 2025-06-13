@@ -2,3 +2,5 @@
 .mcp.json
 __pycache__/
 .env.test
+.pytest_cache/
+.mcp.json
