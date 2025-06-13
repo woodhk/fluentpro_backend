@@ -1,9 +1,13 @@
 from typing import Dict, Any, Optional
 from ...integrations.auth0 import Auth0ManagementClient
 from ..users.user_service import UserService
+from ..onboarding.onboarding_progress_service import OnboardingProgressService
 from ...core.exceptions import AuthenticationError, UserNotFoundError
 from ...utils.validators import is_valid_email, is_strong_password, normalize_email, sanitize_string
 from supabase import Client
+from ...core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class AuthService:
@@ -13,13 +17,15 @@ class AuthService:
         self.db = db
         self.auth0_client = Auth0ManagementClient()
         self.user_service = UserService(db)
+        self.progress_service = OnboardingProgressService(db)
     
     async def signup_user(self, email: str, password: str, full_name: str) -> Dict[str, Any]:
         """
         Complete user signup process
         1. Create user in Auth0
         2. Create user in Supabase
-        3. Return success response
+        3. Initialize onboarding progress
+        4. Return success response
         """
         try:
             # Validate and normalize input
@@ -51,6 +57,19 @@ class AuthService:
             
             supabase_user = await self.user_service.create_user_from_auth0(user_data)
             
+            # Initialize onboarding progress for new user
+            try:
+                await self.progress_service.progress_repo.upsert_progress(
+                    user_id=supabase_user["id"],
+                    current_step="not_started",
+                    data={"signup_date": "now()"},
+                    completed=False
+                )
+                logger.info(f"Initialized onboarding progress for new user {supabase_user['id']}")
+            except Exception as e:
+                # Don't fail signup if progress initialization fails
+                logger.error(f"Failed to initialize onboarding progress: {str(e)}")
+            
             return {
                 "success": True,
                 "message": "User created successfully",
@@ -75,6 +94,21 @@ class AuthService:
             existing_user = await self.get_user_by_auth0_id(auth0_id)
             
             if existing_user:
+                # Check if they have onboarding progress (for backwards compatibility)
+                try:
+                    progress = await self.progress_service.progress_repo.get_user_progress(existing_user["id"])
+                    if not progress:
+                        # Create progress for existing users who don't have it
+                        await self.progress_service.progress_repo.upsert_progress(
+                            user_id=existing_user["id"],
+                            current_step="not_started",
+                            data={"created_for_existing_user": True},
+                            completed=False
+                        )
+                        logger.info(f"Created onboarding progress for existing user {existing_user['id']}")
+                except Exception as e:
+                    logger.error(f"Failed to check/create progress for existing user: {str(e)}")
+                
                 return existing_user
             
             # User doesn't exist, fetch from Auth0 and create in Supabase
@@ -90,7 +124,21 @@ class AuthService:
                 "name": auth0_profile.get("name")
             }
             
-            return await self.user_service.create_user_from_auth0(user_data)
+            new_user = await self.user_service.create_user_from_auth0(user_data)
+            
+            # Initialize onboarding progress for new user
+            try:
+                await self.progress_service.progress_repo.upsert_progress(
+                    user_id=new_user["id"],
+                    current_step="not_started",
+                    data={"created_via_auth0": True},
+                    completed=False
+                )
+                logger.info(f"Initialized onboarding progress for Auth0 user {new_user['id']}")
+            except Exception as e:
+                logger.error(f"Failed to initialize onboarding progress: {str(e)}")
+            
+            return new_user
             
         except Exception as e:
             raise AuthenticationError(f"Failed to get or create user: {str(e)}")
