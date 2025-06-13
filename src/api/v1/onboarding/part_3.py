@@ -44,16 +44,11 @@ async def get_onboarding_summary(
         # Get the summary
         summary = await service.get_onboarding_summary(auth0_id)
         
-        # Track that user is viewing the final summary
-        # This indicates they're ready to complete onboarding
+        # Track that user viewed the onboarding summary (Part 3)
         await progress_service.update_progress_on_action(
             auth0_id=auth0_id,
             action="view_summary",
-            action_data={
-                "viewed_final_summary": True,
-                "is_complete": summary.get("is_complete", False),
-                "timestamp": "now()"
-            }
+            action_data={"viewed_at": "now()"}
         )
         
         return OnboardingSummaryResponse(

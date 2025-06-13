@@ -183,17 +183,12 @@ async def get_selections_summary(
     logger.info(f"Getting selections summary for user {auth0_id}")
     
     service = CommunicationService(db)
-    progress_service = OnboardingProgressService(db)
+    # REMOVED progress_service - this is just a review, not the final summary
     
     try:
         result = await service.get_user_selections_summary(auth0_id)
         
-        # Track that user viewed the summary
-        await progress_service.update_progress_on_action(
-            auth0_id=auth0_id,
-            action="view_summary",
-            action_data={"viewed_at": "now()"}
-        )
+        # REMOVED progress tracking - this belongs in Part 3
         
         return OnboardingPart2SummaryResponse(
             success=True,
