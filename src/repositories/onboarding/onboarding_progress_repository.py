@@ -41,9 +41,9 @@ class OnboardingProgressRepository(SupabaseRepository):
         }
         
         try:
-            # Supabase Python client upsert syntax
+            # Supabase Python client's upsert with on_conflict
             result = self.db.table(self.table_name)\
-                .upsert(progress_data)\
+                .upsert(progress_data, on_conflict="user_id")\
                 .execute()
             
             if not result.data:
