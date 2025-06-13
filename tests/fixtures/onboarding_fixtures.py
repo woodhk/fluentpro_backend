@@ -1,6 +1,6 @@
 import pytest
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 @pytest.fixture
@@ -18,8 +18,8 @@ def mock_user_data() -> Dict[str, Any]:
         "custom_role_description": None,
         "onboarding_status": "personalisation",
         "is_active": True,
-        "created_at": datetime.utcnow().isoformat(),
-        "updated_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
     }
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def mock_industry_data() -> Dict[str, Any]:
         "name": "Banking & Finance",
         "status": "available",
         "sort_order": 1,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def mock_role_data() -> Dict[str, Any]:
         "industry_id": str(uuid4()),
         "is_system_role": True,
         "is_active": True,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
 
 @pytest.fixture
@@ -54,7 +54,7 @@ def mock_communication_partner_data() -> Dict[str, Any]:
         "name": "Clients",
         "description": "External clients and customers",
         "is_active": True,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
 
 @pytest.fixture
@@ -65,5 +65,5 @@ def mock_situation_data() -> Dict[str, Any]:
         "name": "Meetings",
         "description": "Face-to-face or virtual meetings",
         "is_active": True,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat()
     }

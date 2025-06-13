@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Any, Dict
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class BaseResponse(BaseModel):
@@ -8,4 +8,4 @@ class BaseResponse(BaseModel):
     success: bool = True
     message: str
     data: Optional[Dict[str, Any]] = None
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from ..base import BaseResponse
@@ -11,8 +11,7 @@ class CommunicationPartner(BaseModel):
     name: str
     description: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GetCommunicationPartnersResponse(BaseResponse):
@@ -20,7 +19,7 @@ class GetCommunicationPartnersResponse(BaseResponse):
 
 
 class SelectCommunicationPartnersRequest(BaseModel):
-    partner_ids: List[UUID] = Field(..., min_items=1, description="List of selected partner IDs in priority order")
+    partner_ids: List[UUID] = Field(..., min_length=1, description="List of selected partner IDs in priority order")
 
 
 class SelectCommunicationPartnersResponse(BaseResponse):
@@ -34,8 +33,7 @@ class CommunicationSituation(BaseModel):
     name: str
     description: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GetSituationsForPartnerRequest(BaseModel):
@@ -51,7 +49,7 @@ class GetSituationsResponse(BaseResponse):
 
 class SelectSituationsRequest(BaseModel):
     partner_id: UUID
-    situation_ids: List[UUID] = Field(..., min_items=1, description="List of selected situation IDs in priority order")
+    situation_ids: List[UUID] = Field(..., min_length=1, description="List of selected situation IDs in priority order")
 
 
 class SelectSituationsResponse(BaseResponse):

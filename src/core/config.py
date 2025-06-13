@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from typing import List
 
 class Settings(BaseSettings):
@@ -42,9 +43,10 @@ class Settings(BaseSettings):
             return ["*"]
         return [origin.strip() for origin in self.CORS_ALLOWED_ORIGINS.split(",")]
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"  # Ignore extra fields from .env
+    model_config = ConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore"
+    )
 
 settings = Settings()

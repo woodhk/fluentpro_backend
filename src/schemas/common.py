@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
-from typing import TypeVar, Generic, List, Optional, Any
-from datetime import datetime
+from pydantic import BaseModel, Field, ConfigDict
+from typing import TypeVar, Generic, List, Optional, Any, Dict
+from datetime import datetime, timezone
 
 T = TypeVar('T')
 
@@ -24,7 +24,7 @@ class ErrorResponse(BaseModel):
     error: str
     message: str
     details: Optional[Dict[str, Any]] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class SuccessResponse(BaseModel):
     """Standard success response."""
@@ -36,7 +36,7 @@ class HealthCheckResponse(BaseModel):
     """Health check response."""
     status: str
     message: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     version: Optional[str] = None
 
 class TimestampMixin(BaseModel):
@@ -53,8 +53,7 @@ class FilterParams(BaseModel):
     """Base class for filter parameters."""
     search: Optional[str] = Field(None, description="Search term")
     
-    class Config:
-        extra = "allow"  # Allow additional fields for specific filters
+    model_config = ConfigDict(extra="allow")  # Allow additional fields for specific filters
 
 class BatchOperationResult(BaseModel):
     """Result of a batch operation."""

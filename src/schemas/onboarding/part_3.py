@@ -1,6 +1,6 @@
 """Schemas for Onboarding Part 3 - Summary and Completion"""
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
 from ..base import BaseResponse
 from ...models.enums import NativeLanguage
@@ -14,8 +14,7 @@ class RoleSummary(BaseModel):
     is_custom: bool
     industry_name: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SituationSummary(BaseModel):
@@ -25,8 +24,7 @@ class SituationSummary(BaseModel):
     description: Optional[str] = None
     priority: int
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CommunicationPartnerSummary(BaseModel):
@@ -37,8 +35,7 @@ class CommunicationPartnerSummary(BaseModel):
     priority: int
     situations: List[SituationSummary]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OnboardingSummary(BaseModel):
@@ -63,8 +60,7 @@ class OnboardingSummary(BaseModel):
     onboarding_status: str
     is_complete: bool
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OnboardingSummaryResponse(BaseResponse):
