@@ -61,21 +61,16 @@ async def select_communication_partners(
         # Convert UUIDs to strings
         partner_ids = [str(pid) for pid in selection.partner_ids]
         
-        # Process partner selection
         result = await service.select_communication_partners(
             auth0_id=auth0_id,
             partner_ids=partner_ids
         )
         
-        # Track progress after successful selection
+        # Track progress after successful operation
         await progress_service.update_progress_on_action(
             auth0_id=auth0_id,
             action="select_communication_partners",
-            action_data={
-                "partner_ids": partner_ids,
-                "selected_count": result["selected_count"],
-                "timestamp": "now()"
-            }
+            action_data={"partner_ids": partner_ids, "count": len(partner_ids)}
         )
         
         return SelectCommunicationPartnersResponse(
@@ -100,7 +95,7 @@ async def get_situations_for_partner(
     auth0_id: Annotated[str, Depends(get_current_user_auth0_id)],
     db: Annotated[Client, Depends(get_db)]
 ):
-    """Get available situations for a specific communication partner."""
+    """Get available situations and user's selections for a specific partner."""
     logger.info(f"Getting situations for partner {partner_id}")
     
     service = CommunicationService(db)
@@ -144,38 +139,23 @@ async def select_situations_for_partner(
     try:
         # Convert UUIDs to strings
         situation_ids = [str(sid) for sid in selection.situation_ids]
-        partner_id = str(selection.partner_id)
         
-        # Process situation selection
         result = await service.select_situations_for_partner(
             auth0_id=auth0_id,
-            partner_id=partner_id,
+            partner_id=str(selection.partner_id),
             situation_ids=situation_ids
         )
         
-        # Track progress - update to reflect situation selection
-        # Get current progress to check if all partners have situations selected
-        user_summary = await service.get_user_selections_summary(auth0_id)
-        all_partners_have_situations = all(
-            len(p.get("situations", [])) > 0 
-            for p in user_summary.get("selections", [])
+        # Track progress after successful operation
+        await progress_service.update_progress_on_action(
+            auth0_id=auth0_id,
+            action="select_situations",
+            action_data={
+                "partner_id": str(selection.partner_id),
+                "situation_ids": situation_ids,
+                "count": len(situation_ids)
+            }
         )
-        
-        progress_data = {
-            "partner_id": partner_id,
-            "situation_ids": situation_ids,
-            "selected_count": result["selected_count"],
-            "all_partners_configured": all_partners_have_situations,
-            "timestamp": "now()"
-        }
-        
-        # Only advance to situation_selection step if all partners have situations
-        if all_partners_have_situations:
-            await progress_service.update_progress_on_action(
-                auth0_id=auth0_id,
-                action="select_situations",
-                action_data=progress_data
-            )
         
         return SelectSituationsResponse(
             success=True,
@@ -208,15 +188,11 @@ async def get_selections_summary(
     try:
         result = await service.get_user_selections_summary(auth0_id)
         
-        # Track that user viewed the summary (they're preparing to complete part 2)
+        # Track that user viewed the summary
         await progress_service.update_progress_on_action(
             auth0_id=auth0_id,
             action="view_summary",
-            action_data={
-                "total_partners": result["total_partners_selected"],
-                "total_situations": result["total_situations_selected"],
-                "timestamp": "now()"
-            }
+            action_data={"viewed_at": "now()"}
         )
         
         return OnboardingPart2SummaryResponse(
@@ -243,16 +219,9 @@ async def complete_part_2(
     logger.info(f"Completing Part 2 for user {auth0_id}")
     
     service = CommunicationService(db)
-    progress_service = OnboardingProgressService(db)
     
     try:
-        # Complete part 2 in the communication service
         result = await service.complete_part_2(auth0_id)
-        
-        # Progress tracking is handled by the communication service
-        # which updates the onboarding_status in the users table
-        # We don't need to call progress_service here as Part 3 
-        # completion will handle the final progress update
         
         return {
             "success": result["success"],
