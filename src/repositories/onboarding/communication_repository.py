@@ -25,6 +25,14 @@ class CommunicationRepository(SupabaseRepository):
             .execute()
         return result.data or []
     
+    async def get_partner_by_id(self, partner_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific communication partner by ID."""
+        result = self.db.table(self.table_name)\
+            .select("*")\
+            .eq("id", partner_id)\
+            .execute()
+        return result.data[0] if result.data else None
+    
     async def get_all_active_units(self) -> List[Dict[str, Any]]:
         """Get all active communication situations/units."""
         result = self.db.table(self.units_table)\
