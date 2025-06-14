@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 class BaseResponse(BaseModel):
     """Base response schema."""
+
     success: bool = True
     message: str
     data: Optional[Dict[str, Any]] = None

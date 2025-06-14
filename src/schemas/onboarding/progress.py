@@ -6,6 +6,7 @@ from ..base import BaseResponse
 
 class OnboardingStep(str):
     """Valid onboarding steps."""
+
     NOT_STARTED = "not_started"
     NATIVE_LANGUAGE = "native_language"
     INDUSTRY_SELECTION = "industry_selection"
@@ -19,6 +20,7 @@ class OnboardingStep(str):
 
 class OnboardingProgress(BaseModel):
     """Onboarding progress model."""
+
     id: str
     user_id: str
     current_step: str
@@ -26,28 +28,37 @@ class OnboardingProgress(BaseModel):
     completed: bool = False
     created_at: datetime
     updated_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class OnboardingProgressResponse(BaseResponse):
     """Response for onboarding progress."""
+
     progress: OnboardingProgress
     next_step: str
 
 
 class OnboardingActionRequest(BaseModel):
     """Request to track an onboarding action."""
+
     action: str = Field(..., description="The action performed")
-    data: Optional[Dict[str, Any]] = Field(None, description="Action-specific data to store")
-    
-    @field_validator('action')
+    data: Optional[Dict[str, Any]] = Field(
+        None, description="Action-specific data to store"
+    )
+
+    @field_validator("action")
     @classmethod
     def validate_action(cls, v: str) -> str:
         valid_actions = [
-            "set_native_language", "set_industry", "search_roles",
-            "select_role", "select_communication_partners",
-            "select_situations", "view_summary", "complete_onboarding"
+            "set_native_language",
+            "set_industry",
+            "search_roles",
+            "select_role",
+            "select_communication_partners",
+            "select_situations",
+            "view_summary",
+            "complete_onboarding",
         ]
         if v not in valid_actions:
             raise ValueError(f"Invalid action. Must be one of: {valid_actions}")
@@ -56,6 +67,7 @@ class OnboardingActionRequest(BaseModel):
 
 class OnboardingStatusResponse(BaseResponse):
     """Response for onboarding status check."""
+
     current_step: str
     next_step: str
     completed: bool

@@ -4,6 +4,8 @@ pytest-asyncio>=0.23.0
 pytest-mock>=3.14.0
 requests>=2.28.0
 httpx>=0.24.0
+black
+ruff
 
 # Include all production dependencies
 -r requirements.txt

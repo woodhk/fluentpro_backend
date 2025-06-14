@@ -24,7 +24,7 @@ class HierarchyLevel(str, Enum):
 
 class Industry(str, Enum):
     BANKING_FINANCE = "banking_finance"
-    SHIPPING_LOGISTICS = "shipping_logistics" 
+    SHIPPING_LOGISTICS = "shipping_logistics"
     REAL_ESTATE = "real_estate"
     HOTELS_HOSPITALITY = "hotels_hospitality"
 

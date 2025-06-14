@@ -9,6 +9,7 @@ from typing import Dict, Any
 # HTTP Bearer token scheme
 security = HTTPBearer()
 
+
 async def get_current_user_auth0_id(token: str = Depends(security)) -> str:
     """Extract Auth0 user ID from JWT token"""
     try:
@@ -17,18 +18,15 @@ async def get_current_user_auth0_id(token: str = Depends(security)) -> str:
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token: no user ID found"
+                detail="Invalid token: no user ID found",
             )
         return user_id
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
 
 async def get_current_user(
-    auth0_id: str = Depends(get_current_user_auth0_id),
-    db: Client = Depends(get_db)
+    auth0_id: str = Depends(get_current_user_auth0_id), db: Client = Depends(get_db)
 ) -> Dict[str, Any]:
     """Get current user from Supabase or create if doesn't exist"""
     auth_service = AuthService(db)

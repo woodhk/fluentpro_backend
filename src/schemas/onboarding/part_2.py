@@ -10,7 +10,7 @@ class CommunicationPartner(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -19,7 +19,9 @@ class GetCommunicationPartnersResponse(BaseResponse):
 
 
 class SelectCommunicationPartnersRequest(BaseModel):
-    partner_ids: List[UUID] = Field(..., min_length=1, description="List of selected partner IDs in priority order")
+    partner_ids: List[UUID] = Field(
+        ..., min_length=1, description="List of selected partner IDs in priority order"
+    )
 
 
 class SelectCommunicationPartnersResponse(BaseResponse):
@@ -32,7 +34,7 @@ class CommunicationSituation(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -49,7 +51,11 @@ class GetSituationsResponse(BaseResponse):
 
 class SelectSituationsRequest(BaseModel):
     partner_id: UUID
-    situation_ids: List[UUID] = Field(..., min_length=1, description="List of selected situation IDs in priority order")
+    situation_ids: List[UUID] = Field(
+        ...,
+        min_length=1,
+        description="List of selected situation IDs in priority order",
+    )
 
 
 class SelectSituationsResponse(BaseResponse):

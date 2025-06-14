@@ -7,8 +7,8 @@ from .summary_service import OnboardingSummaryService  # Add this
 
 __all__ = [
     "ProfileService",
-    "JobMatchingService", 
+    "JobMatchingService",
     "AzureSearchService",
     "CommunicationService",
-    "OnboardingSummaryService"  # Add this
+    "OnboardingSummaryService",  # Add this
 ]
