@@ -2,10 +2,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
-from typing import Dict, Any
 
-from src.core.exceptions import UserNotFoundError, DatabaseError
-from src.models.enums import NativeLanguage, OnboardingStatus
+from src.core.exceptions import UserNotFoundError
+from src.models.enums import OnboardingStatus
 
 # This import will fail initially - expected in TDD
 try:

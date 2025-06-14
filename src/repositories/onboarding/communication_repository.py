@@ -1,5 +1,4 @@
 from typing import List, Dict, Any, Optional
-from uuid import UUID
 from supabase import Client
 from ..base import SupabaseRepository
 from ...core.logging import get_logger

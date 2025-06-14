@@ -1,11 +1,9 @@
-from typing import List, Dict, Any, Optional
-from uuid import UUID
+from typing import List, Dict, Any
 from supabase import Client
 from ...repositories.onboarding.communication_repository import CommunicationRepository
 from ...repositories.onboarding.profile_repository import ProfileRepository
 from ...core.exceptions import DatabaseError
 from ...core.logging import get_logger
-from ...models.enums import OnboardingStatus
 
 logger = get_logger(__name__)
 

@@ -2,7 +2,6 @@ from jose import jwt, JWTError
 from .config import settings
 from typing import Dict, Any
 import httpx
-import json
 
 
 class Auth0JWTValidator:

@@ -12,7 +12,6 @@ Commands:
 
 import asyncio
 import sys
-import os
 from pathlib import Path
 
 # Add project root to path
@@ -44,7 +43,7 @@ async def reindex_roles():
         service = AzureSearchService(db)
         result = await service.reindex_all_roles()
         
-        print(f"✅ Reindexing complete:")
+        print("✅ Reindexing complete:")
         print(f"   - Total roles: {result['total_roles']}")
         print(f"   - Documents indexed: {result['documents_indexed']}")
     except Exception as e:
@@ -80,7 +79,7 @@ async def generate_embeddings():
         service = AzureSearchService(db)
         result = await service.generate_missing_embeddings()
         
-        print(f"✅ Embedding generation complete:")
+        print("✅ Embedding generation complete:")
         print(f"   - Embeddings generated: {result['embeddings_generated']}")
         print(f"   - Total without embeddings: {result.get('total_without_embeddings', 0)}")
     except Exception as e:

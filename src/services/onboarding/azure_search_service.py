@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 from supabase import Client
 from ...repositories.onboarding.job_roles_repository import JobRolesRepository
 from ...integrations.openai import openai_client

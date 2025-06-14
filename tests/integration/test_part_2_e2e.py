@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, Mock, AsyncMock
+from unittest.mock import Mock
 from uuid import uuid4
 from src.main import app
 from src.core.dependencies import get_current_user_auth0_id, get_db

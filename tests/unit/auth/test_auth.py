@@ -2,8 +2,7 @@ import pytest
 from unittest.mock import patch, Mock
 from fastapi import HTTPException
 from src.core.auth import auth0_validator
-from src.core.dependencies import get_current_user_auth0_id, get_current_user
-from src.core.exceptions import InvalidTokenError
+from src.core.dependencies import get_current_user_auth0_id
 
 class TestAuth0JWTValidator:
     """Test Auth0 JWT validation functionality"""

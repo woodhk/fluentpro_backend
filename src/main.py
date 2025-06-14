@@ -4,7 +4,7 @@ from .core.config import settings
 from .core.rate_limiting import limiter, rate_limit_handler
 from .api.router import api_router
 from slowapi.errors import RateLimitExceeded
-from .core.logging import setup_logging, get_logger
+from .core.logging import setup_logging
 
 # Setup logging
 logger = setup_logging(

@@ -1,6 +1,5 @@
 import pytest
-import asyncio
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 
 # Import all components to verify they exist
 from src.core.config import settings

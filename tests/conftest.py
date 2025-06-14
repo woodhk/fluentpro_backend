@@ -1,6 +1,5 @@
 import pytest
 import asyncio
-from typing import Generator, Dict, Any
 from fastapi.testclient import TestClient
 from unittest.mock import Mock, AsyncMock, patch
 from src.main import app

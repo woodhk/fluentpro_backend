@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from uuid import uuid4
 from src.services.onboarding.communication_service import CommunicationService
-from src.core.exceptions import DatabaseError
 
 
 class TestCommunicationService:

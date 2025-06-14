@@ -1,8 +1,8 @@
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, patch
 from src.services.users.user_service import UserService
 from src.integrations.supabase import SupabaseUserRepository
-from src.core.exceptions import UserNotFoundError, DatabaseError
+from src.core.exceptions import UserNotFoundError
 
 class TestSupabaseUserRepository:
     """Test Supabase user repository operations"""

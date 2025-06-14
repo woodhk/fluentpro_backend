@@ -1,6 +1,5 @@
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import asyncio
+from unittest.mock import Mock, AsyncMock, patch
 from src.services.onboarding.job_matching_service import JobMatchingService
 
 @pytest.mark.integration

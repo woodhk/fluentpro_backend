@@ -17,7 +17,7 @@ from azure.search.documents.indexes.models import (
 )
 from azure.search.documents.models import VectorizedQuery
 from azure.core.credentials import AzureKeyCredential
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from ..core.config import settings
 from ..core.logging import get_logger
 

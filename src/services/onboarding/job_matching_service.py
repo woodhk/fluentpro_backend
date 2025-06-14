@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from supabase import Client
 from ...repositories.onboarding.job_roles_repository import JobRolesRepository
 from ...repositories.onboarding.profile_repository import ProfileRepository

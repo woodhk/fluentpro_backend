@@ -1,5 +1,5 @@
 from openai import OpenAI
-from typing import List, Dict, Any
+from typing import List
 from ..core.config import settings
 from ..core.logging import get_logger
 

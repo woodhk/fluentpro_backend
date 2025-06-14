@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock
 from uuid import uuid4
 from src.repositories.onboarding.communication_repository import CommunicationRepository
 

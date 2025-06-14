@@ -1,4 +1,3 @@
-import pytest
 from src.models.enums import CommunicationPartnerType, CommunicationSituation
 
 

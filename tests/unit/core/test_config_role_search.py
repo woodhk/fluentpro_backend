@@ -1,4 +1,3 @@
-import pytest
 from src.core.config import Settings
 
 class TestRoleSearchConfiguration:

@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch
 from src.integrations.azure_search import AzureSearchClient
 
 class TestAzureSearchClient:

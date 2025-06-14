@@ -1,15 +1,11 @@
 import pytest
-from uuid import UUID, uuid4
+from uuid import uuid4
 from pydantic import ValidationError
 from src.schemas.onboarding.part_2 import (
     CommunicationPartner,
     GetCommunicationPartnersResponse,
     SelectCommunicationPartnersRequest,
-    SelectCommunicationPartnersResponse,
-    CommunicationSituation as SituationSchema,
-    GetSituationsResponse,
     SelectSituationsRequest,
-    SelectSituationsResponse,
     OnboardingPart2SummaryResponse
 )
 

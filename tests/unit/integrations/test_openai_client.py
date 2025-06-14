@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 from src.integrations.openai import OpenAIClient
 
 class TestOpenAIClient:

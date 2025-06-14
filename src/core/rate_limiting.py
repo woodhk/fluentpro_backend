@@ -1,10 +1,9 @@
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 import redis
-from .config import settings
 from typing import Optional
 import os
 

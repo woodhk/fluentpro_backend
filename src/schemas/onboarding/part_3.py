@@ -1,6 +1,6 @@
 """Schemas for Onboarding Part 3 - Summary and Completion"""
 from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from ..base import BaseResponse
 from ...models.enums import NativeLanguage

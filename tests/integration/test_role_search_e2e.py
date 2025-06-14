@@ -1,8 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from src.main import app
-import os
-from unittest.mock import patch, Mock, AsyncMock
+from unittest.mock import patch, Mock
 from src.core.dependencies import get_current_user_auth0_id, get_db
 
 @pytest.mark.integration
