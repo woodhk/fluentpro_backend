@@ -26,6 +26,44 @@ class AuthService:
         self.user_service = UserService(db)
         self.progress_service = OnboardingProgressService(db)
 
+    async def login_user(self, email: str, password: str) -> Dict[str, Any]:
+        """
+        Login user and get access token
+        1. Validate input
+        2. Authenticate with Auth0
+        3. Get or create user in Supabase
+        4. Return token and user data
+        """
+        try:
+            # Validate and normalize input
+            email = normalize_email(email)
+            if not is_valid_email(email):
+                raise AuthenticationError("Invalid email format")
+
+            if not password:
+                raise AuthenticationError("Password is required")
+
+            # Authenticate with Auth0
+            auth_result = await self.auth0_client.authenticate_user(email, password)
+            
+            # Extract the Auth0 user ID from the access token
+            from ...core.auth import auth0_validator
+            token_payload = auth0_validator.verify_jwt_token(auth_result["access_token"])
+            auth0_id = token_payload["sub"]
+
+            # Get or create user in Supabase
+            user = await self.get_or_create_user(auth0_id)
+
+            return {
+                "success": True,
+                "message": "Login successful",
+                "access_token": auth_result["access_token"],
+                "user": user,
+            }
+
+        except Exception as e:
+            raise AuthenticationError(f"Login failed: {str(e)}")
+
     async def signup_user(
         self, email: str, password: str, full_name: str, date_of_birth: Optional[date] = None
     ) -> Dict[str, Any]:

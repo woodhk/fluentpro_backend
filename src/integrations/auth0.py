@@ -93,6 +93,39 @@ class Auth0ManagementClient:
         except Exception as e:
             raise Exception(f"Failed to create user in Auth0: {str(e)}")
 
+    async def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
+        """Authenticate user with Auth0 and get access token"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"https://{self.domain}/oauth/token",
+                    json={
+                        "grant_type": "password",
+                        "username": email,
+                        "password": password,
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                        "audience": settings.AUTH0_AUDIENCE,
+                        "scope": "openid profile email",
+                    },
+                )
+                
+                if response.status_code == 403:
+                    error_data = response.json()
+                    if error_data.get("error") == "invalid_grant":
+                        raise Exception("Invalid email or password")
+                    raise Exception(f"Authentication failed: {error_data.get('error_description', 'Unknown error')}")
+                
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 403:
+                raise Exception("Invalid email or password")
+            raise Exception(f"Authentication failed: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error authenticating user with Auth0: {e}", exc_info=True)
+            raise
+
 
 # Global instance and alias
 auth0_client = Auth0ManagementClient()

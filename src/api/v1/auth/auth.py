@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from supabase import Client
 from ....core.dependencies import get_current_user_auth0_id, get_current_user, get_db
 from ....core.rate_limiting import limiter, AUTH_RATE_LIMIT
-from ....schemas.auth.auth import AuthStatus, SignupRequest, SignupResponse
+from ....schemas.auth.auth import AuthStatus, SignupRequest, SignupResponse, LoginRequest, LoginResponse
 from ....services.auth.auth_service import AuthService
 from typing import Dict, Any
 
@@ -38,6 +38,31 @@ async def verify_token(
 ):
     """Verify JWT token and return Auth0 user ID"""
     return {"valid": True, "auth0_id": auth0_id, "message": "Token is valid"}
+
+
+@router.post("/login", response_model=LoginResponse)
+@limiter.limit(AUTH_RATE_LIMIT)
+async def login_user(
+    request: Request, login_data: LoginRequest, db: Client = Depends(get_db)
+):
+    """Authenticate user and return access token"""
+    try:
+        auth_service = AuthService(db)
+
+        result = await auth_service.login_user(
+            email=login_data.email,
+            password=login_data.password,
+        )
+
+        return LoginResponse(
+            success=result["success"],
+            message=result["message"],
+            access_token=result["access_token"],
+            user=result["user"],
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
 
 @router.post("/signup", response_model=SignupResponse)

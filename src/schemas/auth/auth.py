@@ -40,3 +40,15 @@ class SignupResponse(BaseModel):
     success: bool
     message: str
     user_id: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class LoginResponse(BaseModel):
+    success: bool
+    message: str
+    access_token: str
+    user: Dict[str, Any]
