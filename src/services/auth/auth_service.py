@@ -1,4 +1,5 @@
 from typing import Dict, Any, Optional
+from datetime import date
 from ...integrations.auth0 import Auth0ManagementClient
 from ..users.user_service import UserService
 from ..onboarding.onboarding_progress_service import OnboardingProgressService
@@ -8,6 +9,7 @@ from ...utils.validators import (
     is_strong_password,
     normalize_email,
     sanitize_string,
+    is_valid_date_of_birth,
 )
 from supabase import Client
 from ...core.logging import get_logger
@@ -25,7 +27,7 @@ class AuthService:
         self.progress_service = OnboardingProgressService(db)
 
     async def signup_user(
-        self, email: str, password: str, full_name: str
+        self, email: str, password: str, full_name: str, date_of_birth: Optional[date] = None
     ) -> Dict[str, Any]:
         """
         Complete user signup process
@@ -48,6 +50,12 @@ class AuthService:
             if len(full_name) < 2:
                 raise AuthenticationError("Name must be at least 2 characters long")
 
+            # Validate date of birth if provided
+            if date_of_birth:
+                is_valid_dob, dob_error = is_valid_date_of_birth(date_of_birth)
+                if not is_valid_dob:
+                    raise AuthenticationError(dob_error)
+
             # Create user in Auth0
             auth0_user = await self.auth0_client.create_user(
                 email=email, password=password, name=full_name
@@ -60,7 +68,7 @@ class AuthService:
                 "name": auth0_user.get("name", full_name),
             }
 
-            supabase_user = await self.user_service.create_user_from_auth0(user_data)
+            supabase_user = await self.user_service.create_user_from_auth0(user_data, date_of_birth=date_of_birth)
 
             # Initialize onboarding progress for new user
             try:
