@@ -1,5 +1,4 @@
 from typing import Dict, Any, Optional, List
-from datetime import date
 from supabase import Client
 from ..base import SupabaseRepository
 from ...core.exceptions import DatabaseError
@@ -28,10 +27,6 @@ class UserRepository(SupabaseRepository):
     async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new user with proper data formatting."""
         try:
-            # Format date of birth if present
-            if "date_of_birth" in user_data and user_data["date_of_birth"]:
-                if isinstance(user_data["date_of_birth"], date):
-                    user_data["date_of_birth"] = user_data["date_of_birth"].isoformat()
 
             # Ensure email is lowercase
             if "email" in user_data:
@@ -46,12 +41,6 @@ class UserRepository(SupabaseRepository):
     ) -> Optional[Dict[str, Any]]:
         """Update user with proper data formatting."""
         try:
-            # Format date of birth if present
-            if "date_of_birth" in update_data and update_data["date_of_birth"]:
-                if isinstance(update_data["date_of_birth"], date):
-                    update_data["date_of_birth"] = update_data[
-                        "date_of_birth"
-                    ].isoformat()
 
             # Ensure email is lowercase if being updated
             if "email" in update_data:

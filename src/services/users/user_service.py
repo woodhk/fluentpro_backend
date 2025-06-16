@@ -1,5 +1,4 @@
 from typing import Dict, Any, Optional
-from datetime import date
 from supabase import Client
 from ...repositories.users.user_repository import UserRepository
 from ...integrations.auth0 import auth0_client
@@ -23,18 +22,13 @@ class UserService:
         return await self.user_repo.get_by_auth0_id(auth0_id)
 
     async def create_user_from_auth0(
-        self, auth0_data: Dict[str, Any], date_of_birth: Optional[date] = None
+        self, auth0_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Create user from Auth0 profile data"""
-        from datetime import date
-
         user_data = {
             "auth0_id": auth0_data.get("sub"),
             "email": auth0_data.get("email"),
             "full_name": auth0_data.get("name"),
-            "date_of_birth": date_of_birth if date_of_birth else date(
-                1990, 1, 1
-            ),  # Use provided DOB or default
             "is_active": True,
         }
 

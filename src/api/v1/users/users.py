@@ -20,7 +20,6 @@ async def get_current_user_profile(
         id=current_user["id"],
         full_name=current_user.get("full_name"),
         email=current_user["email"],
-        date_of_birth=current_user.get("date_of_birth"),
         is_active=current_user["is_active"],
     )
 
@@ -44,7 +43,6 @@ async def update_current_user_profile(
             id=updated_user["id"],
             full_name=updated_user.get("full_name"),
             email=updated_user["email"],
-            date_of_birth=updated_user.get("date_of_birth"),
             is_active=updated_user["is_active"],
         )
     except UserNotFoundError:
@@ -70,7 +68,6 @@ async def get_user_by_id(
             id=user["id"],
             full_name=user.get("full_name"),
             email=user["email"],
-            date_of_birth=user.get("date_of_birth"),
             is_active=user["is_active"],
         )
     except UserNotFoundError:

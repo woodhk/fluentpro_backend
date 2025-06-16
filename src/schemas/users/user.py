@@ -1,12 +1,11 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
-from datetime import datetime, date
+from datetime import datetime
 from typing import Optional
 
 
 class UserBase(BaseModel):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
-    date_of_birth: Optional[date] = None
 
 
 class UserCreate(UserBase):
@@ -34,5 +33,4 @@ class UserProfile(BaseModel):
     id: str
     full_name: Optional[str]
     email: EmailStr
-    date_of_birth: Optional[date]
     is_active: bool

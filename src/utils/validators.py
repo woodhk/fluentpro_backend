@@ -1,6 +1,5 @@
 import re
 from typing import Optional
-from datetime import date
 
 
 def is_valid_email(email: str) -> bool:
@@ -46,24 +45,6 @@ def normalize_email(email: str) -> str:
 
 
 # Additional validators for future use
-def is_valid_date_of_birth(dob: date) -> tuple[bool, Optional[str]]:
-    """
-    Validate date of birth.
-    Returns (is_valid, error_message)
-    """
-    today = date.today()
-    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-
-    if dob > today:
-        return False, "Date of birth cannot be in the future"
-
-    if age < 13:
-        return False, "User must be at least 13 years old"
-
-    if age > 120:
-        return False, "Invalid date of birth"
-
-    return True, None
 
 
 def format_phone_number(phone: str) -> Optional[str]:
