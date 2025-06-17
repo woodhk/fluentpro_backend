@@ -63,18 +63,15 @@ async def select_communication_partners(
     progress_service = OnboardingProgressService(db)
 
     try:
-        # Convert UUIDs to strings
-        partner_ids = [str(pid) for pid in selection.partner_ids]
-
         result = await service.select_communication_partners(
-            auth0_id=auth0_id, partner_ids=partner_ids
+            auth0_id=auth0_id, partner_ids=selection.partner_ids
         )
 
         # Track progress after successful operation
         await progress_service.update_progress_on_action(
             auth0_id=auth0_id,
             action="select_communication_partners",
-            action_data={"partner_ids": partner_ids, "count": len(partner_ids)},
+            action_data={"partner_ids": selection.partner_ids, "count": len(selection.partner_ids)},
         )
 
         return SelectCommunicationPartnersResponse(
@@ -142,13 +139,10 @@ async def select_situations_for_partner(
     progress_service = OnboardingProgressService(db)
 
     try:
-        # Convert UUIDs to strings
-        situation_ids = [str(sid) for sid in selection.situation_ids]
-
         result = await service.select_situations_for_partner(
             auth0_id=auth0_id,
-            partner_id=str(selection.partner_id),
-            situation_ids=situation_ids,
+            partner_id=selection.partner_id,
+            situation_ids=selection.situation_ids,
         )
 
         # Track progress after successful operation
@@ -156,9 +150,9 @@ async def select_situations_for_partner(
             auth0_id=auth0_id,
             action="select_situations",
             action_data={
-                "partner_id": str(selection.partner_id),
-                "situation_ids": situation_ids,
-                "count": len(situation_ids),
+                "partner_id": selection.partner_id,
+                "situation_ids": selection.situation_ids,
+                "count": len(selection.situation_ids),
             },
         )
 

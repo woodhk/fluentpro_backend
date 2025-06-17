@@ -16,7 +16,7 @@ class CommunicationRepository(SupabaseRepository):
         self.user_partner_units_table = "user_partner_units"
 
     async def get_all_active_partners(self) -> List[Dict[str, Any]]:
-        """Get all active communication partners."""
+        """Get all active communication partners with identifiers."""
         result = (
             self.db.table(self.table_name)
             .select("*")
@@ -24,17 +24,23 @@ class CommunicationRepository(SupabaseRepository):
             .order("name")
             .execute()
         )
-        return result.data or []
+        partners = result.data or []
+        # Add identifier field based on name
+        for partner in partners:
+            partner['identifier'] = self._name_to_identifier(partner['name'])
+        return partners
 
-    async def get_partner_by_id(self, partner_id: str) -> Optional[Dict[str, Any]]:
-        """Get a specific communication partner by ID."""
-        result = (
-            self.db.table(self.table_name).select("*").eq("id", partner_id).execute()
-        )
-        return result.data[0] if result.data else None
+    async def get_partner_by_identifier(self, identifier: str) -> Optional[Dict[str, Any]]:
+        """Get a specific communication partner by string identifier."""
+        # First try to find by exact identifier match (case-insensitive)
+        partners = await self.get_all_active_partners()
+        for partner in partners:
+            if partner['identifier'].lower() == identifier.lower():
+                return partner
+        return None
 
     async def get_all_active_units(self) -> List[Dict[str, Any]]:
-        """Get all active communication situations/units."""
+        """Get all active communication situations/units with identifiers."""
         result = (
             self.db.table(self.units_table)
             .select("*")
@@ -42,7 +48,11 @@ class CommunicationRepository(SupabaseRepository):
             .order("name")
             .execute()
         )
-        return result.data or []
+        units = result.data or []
+        # Add identifier field based on name
+        for unit in units:
+            unit['identifier'] = self._name_to_identifier(unit['name'])
+        return units
 
     async def get_user_selected_partners(self, user_id: str) -> List[Dict[str, Any]]:
         """Get user's selected communication partners with priority."""
@@ -146,3 +156,39 @@ class CommunicationRepository(SupabaseRepository):
             )
 
         return result
+    
+    def _name_to_identifier(self, name: str) -> str:
+        """Convert a name to a string identifier (lowercase, underscores)."""
+        return name.lower().replace(' ', '_').replace('-', '_')
+    
+    async def get_unit_by_identifier(self, identifier: str) -> Optional[Dict[str, Any]]:
+        """Get a specific unit by string identifier."""
+        units = await self.get_all_active_units()
+        for unit in units:
+            if unit['identifier'].lower() == identifier.lower():
+                return unit
+        return None
+    
+    async def resolve_partner_identifiers(self, identifiers: List[str]) -> List[str]:
+        """Convert partner identifiers to UUIDs for database operations."""
+        partners = await self.get_all_active_partners()
+        identifier_map = {p['identifier'].lower(): str(p['id']) for p in partners}
+        
+        resolved_ids = []
+        for identifier in identifiers:
+            uuid_id = identifier_map.get(identifier.lower())
+            if uuid_id:
+                resolved_ids.append(uuid_id)
+        return resolved_ids
+    
+    async def resolve_unit_identifiers(self, identifiers: List[str]) -> List[str]:
+        """Convert unit identifiers to UUIDs for database operations."""
+        units = await self.get_all_active_units()
+        identifier_map = {u['identifier'].lower(): str(u['id']) for u in units}
+        
+        resolved_ids = []
+        for identifier in identifiers:
+            uuid_id = identifier_map.get(identifier.lower())
+            if uuid_id:
+                resolved_ids.append(uuid_id)
+        return resolved_ids

@@ -35,17 +35,19 @@ class CommunicationService:
             if not user:
                 raise DatabaseError("User not found")
 
-            # Validate partner IDs exist
-            available_partners = await self.comm_repo.get_all_active_partners()
-            available_ids = {str(p["id"]) for p in available_partners}
+            # Resolve partner identifiers to UUIDs
+            resolved_ids = await self.comm_repo.resolve_partner_identifiers(partner_ids)
+            
+            # Validate all identifiers were resolved
+            if len(resolved_ids) != len(partner_ids):
+                available_partners = await self.comm_repo.get_all_active_partners()
+                available_identifiers = [p["identifier"] for p in available_partners]
+                invalid_ids = [pid for pid in partner_ids if pid not in available_identifiers]
+                raise ValueError(f"Invalid partner identifiers: {invalid_ids}")
 
-            invalid_ids = [pid for pid in partner_ids if pid not in available_ids]
-            if invalid_ids:
-                raise ValueError(f"Invalid partner IDs: {invalid_ids}")
-
-            # Save selections
+            # Save selections using UUIDs
             selections = await self.comm_repo.save_user_partner_selections(
-                user_id=user["id"], partner_ids=partner_ids
+                user_id=user["id"], partner_ids=resolved_ids
             )
 
             logger.info(
@@ -78,22 +80,29 @@ class CommunicationService:
             # Get all available situations
             all_situations = await self.comm_repo.get_all_active_units()
 
+            # Resolve partner identifier to UUID for database lookup
+            partner = await self.comm_repo.get_partner_by_identifier(partner_id)
+            if not partner:
+                raise ValueError("Invalid partner identifier")
+            
+            partner_uuid = str(partner["id"])
+
             # Get user's selected situations for this partner
             selected = await self.comm_repo.get_user_situations_for_partner(
-                user_id=user["id"], partner_id=partner_id
+                user_id=user["id"], partner_id=partner_uuid
             )
-            selected_ids = [s["unit_id"] for s in selected]
-
-            # Get partner info
-            partner = await self.comm_repo.get_partner_by_id(partner_id)
-            if not partner:
-                raise ValueError("Invalid partner ID")
+            # Convert selected UUIDs back to identifiers
+            selected_unit_ids = [s["unit_id"] for s in selected]
+            selected_identifiers = []
+            for situation in all_situations:
+                if str(situation["id"]) in selected_unit_ids:
+                    selected_identifiers.append(situation["identifier"])
 
             return {
-                "partner_id": partner_id,
+                "partner_id": partner_id,  # Return original identifier
                 "partner_name": partner["name"],
                 "available_situations": all_situations,
-                "selected_situations": selected_ids,
+                "selected_situations": selected_identifiers,
             }
 
         except Exception as e:
@@ -110,17 +119,26 @@ class CommunicationService:
             if not user:
                 raise DatabaseError("User not found")
 
-            # Validate situation IDs exist
-            available_situations = await self.comm_repo.get_all_active_units()
-            available_ids = {str(s["id"]) for s in available_situations}
+            # Resolve partner identifier to UUID
+            partner = await self.comm_repo.get_partner_by_identifier(partner_id)
+            if not partner:
+                raise ValueError("Invalid partner identifier")
+            
+            partner_uuid = str(partner["id"])
 
-            invalid_ids = [sid for sid in situation_ids if sid not in available_ids]
-            if invalid_ids:
-                raise ValueError(f"Invalid situation IDs: {invalid_ids}")
+            # Resolve situation identifiers to UUIDs
+            resolved_unit_ids = await self.comm_repo.resolve_unit_identifiers(situation_ids)
+            
+            # Validate all identifiers were resolved
+            if len(resolved_unit_ids) != len(situation_ids):
+                available_situations = await self.comm_repo.get_all_active_units()
+                available_identifiers = [s["identifier"] for s in available_situations]
+                invalid_ids = [sid for sid in situation_ids if sid not in available_identifiers]
+                raise ValueError(f"Invalid situation identifiers: {invalid_ids}")
 
-            # Save selections
+            # Save selections using UUIDs
             selections = await self.comm_repo.save_user_partner_situations(
-                user_id=user["id"], partner_id=partner_id, unit_ids=situation_ids
+                user_id=user["id"], partner_id=partner_uuid, unit_ids=resolved_unit_ids
             )
 
             logger.info(
@@ -129,7 +147,7 @@ class CommunicationService:
 
             return {
                 "success": True,
-                "partner_id": partner_id,
+                "partner_id": partner_id,  # Return original identifier
                 "selected_count": len(selections),
                 "situation_selections": selections,
             }
